@@ -118,12 +118,18 @@ users/{userId}/transacciones/{txId}
 
 ## 5. Lógica de negocio
 
+> **Representación del dinero:** todos los montos y saldos se manejan como **centavos
+> enteros** (ej. $100.01 = 10001), nunca como floats. Esto evita imprecisión de punto
+> flotante (IEEE-754) al acumular saldos. La UI convierte: ÷100 al mostrar, ×100 al
+> capturar.
+
 ### Registrar ingreso (reparto automático)
 
-- Entrada: `monto` (> 0), `descripcion`, `fecha`.
-- Para cada caja activa: `parte = monto * (porcentaje / 100)`.
-- **Redondeo:** la suma de las partes debe igualar exactamente el monto. El residuo
-  por redondeo se asigna a la caja de mayor porcentaje (garantiza Σpartes = monto).
+- Entrada: `monto` (centavos, entero > 0), `descripcion`, `fecha`.
+- Para cada caja activa: `parte = floor(montoCentavos * porcentaje / 100)`.
+- **Residuo:** la suma de las partes debe igualar exactamente el monto. El residuo
+  entero (montoCentavos − Σpartes) se asigna a la caja de mayor porcentaje (garantiza
+  Σpartes = monto exacto, sin ruido decimal).
 - Escritura batch: crea la transacción (con `reparto`) e `increment(+parte)` en cada
   caja.
 
