@@ -1,3 +1,4 @@
+/// <reference types="node" />
 import { initializeTestEnvironment, assertFails, assertSucceeds }
   from '@firebase/rules-unit-testing';
 import {
