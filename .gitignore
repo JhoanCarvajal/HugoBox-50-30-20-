@@ -2,7 +2,10 @@ node_modules/
 .expo/
 dist/
 *.log
-.env*
+.env
+.env.local
+.env.*.local
+!.env.example
 
 # Expo (añadido por create-expo-app)
 web-build/
