@@ -35,7 +35,10 @@ export const db = initializeFirestore(app, {
   experimentalForceLongPolling: true, // estabilidad en RN
 });
 
+let emuladoresConectados = false;
 export function conectarEmuladores() {
+  if (emuladoresConectados) return;
+  emuladoresConectados = true;
   connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
   connectFirestoreEmulator(db, '127.0.0.1', 8080);
 }

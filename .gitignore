@@ -2,9 +2,7 @@ node_modules/
 .expo/
 dist/
 *.log
-.env
-.env.local
-.env.*.local
+.env*
 !.env.example
 
 # Expo (añadido por create-expo-app)
