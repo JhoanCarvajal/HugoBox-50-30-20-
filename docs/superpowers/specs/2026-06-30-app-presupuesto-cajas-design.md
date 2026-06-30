@@ -1,11 +1,13 @@
-# Diseño — App de presupuesto por cajas ("cuentas_damian")
+# Diseño — HugoBox (app de presupuesto por cajas)
 
+**Nombre de la app:** HugoBox
+**Proyecto:** cuentas_damian
 **Fecha:** 2026-06-30
 **Estado:** Aprobado para planificación
 
 ## 1. Resumen
 
-App móvil de **presupuesto personal por "cajas"** (estilo método de sobres/frascos).
+**HugoBox** es una app móvil de **presupuesto personal por "cajas"** (estilo método de sobres/frascos).
 Cada usuario inicia sesión y registra **ingresos** y **egresos**. Los ingresos se
 **reparten automáticamente por porcentaje** entre varias cajas; los egresos
 **salen de una caja elegida** por el usuario. Hay tres cajas por defecto
@@ -197,7 +199,7 @@ match /users/{userId}/{document=**} {
 
 1. Crear cuenta **Google Play Console** (pago único USD $25).
 2. `eas build -p android --profile production` → genera el **AAB** en la nube.
-3. Configurar ícono, splash, nombre y *package id* en `app.json`.
+3. Configurar ícono, splash, nombre ("HugoBox") y *package id* en `app.json`.
 4. **Política de privacidad** (obligatoria por usar login/datos personales).
 5. Ficha de tienda: capturas, descripción, categoría.
 6. `eas submit` para subir el AAB a Play Console.
