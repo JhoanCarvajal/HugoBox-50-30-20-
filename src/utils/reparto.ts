@@ -1,10 +1,13 @@
 import { Caja, Reparto } from '../types/models';
-import { redondear2 } from './dinero';
 
 type CajaReparto = Pick<Caja, 'id' | 'porcentaje'>;
 
-export function repartirIngreso(monto: number, cajas: CajaReparto[]): Reparto[] {
-  if (!(monto > 0)) throw new Error('El monto debe ser positivo');
+/** Reparte un ingreso (en centavos enteros) entre cajas según su porcentaje.
+ *  Garantiza Σ(partes) === montoCentavos exacto; el residuo va a la caja de mayor %. */
+export function repartirIngreso(montoCentavos: number, cajas: CajaReparto[]): Reparto[] {
+  if (!Number.isInteger(montoCentavos) || montoCentavos <= 0) {
+    throw new Error('El monto (en centavos) debe ser un entero positivo');
+  }
   const total = cajas.reduce((s, c) => s + c.porcentaje, 0);
   if (Math.round(total) !== 100) {
     throw new Error('Los porcentajes de las cajas deben sumar 100');
@@ -12,18 +15,17 @@ export function repartirIngreso(monto: number, cajas: CajaReparto[]): Reparto[] 
 
   const partes: Reparto[] = cajas.map((c) => ({
     cajaId: c.id,
-    monto: redondear2((monto * c.porcentaje) / 100),
+    monto: Math.floor((montoCentavos * c.porcentaje) / 100),
   }));
 
-  const sumaPartes = redondear2(partes.reduce((s, p) => s + p.monto, 0));
-  const residuo = redondear2(monto - sumaPartes);
+  const asignado = partes.reduce((s, p) => s + p.monto, 0);
+  const residuo = montoCentavos - asignado; // entero >= 0
   if (residuo !== 0) {
-    // caja de mayor porcentaje recibe el residuo
     let idxMayor = 0;
     for (let i = 1; i < cajas.length; i++) {
       if (cajas[i].porcentaje > cajas[idxMayor].porcentaje) idxMayor = i;
     }
-    partes[idxMayor].monto = redondear2(partes[idxMayor].monto + residuo);
+    partes[idxMayor].monto += residuo;
   }
   return partes;
 }
