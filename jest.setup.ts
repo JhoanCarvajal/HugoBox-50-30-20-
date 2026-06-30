@@ -39,3 +39,18 @@ const { fetch, Headers, Request, Response } = require('undici');
 const { JSDOM } = require('jsdom');
 const { window: jsdomWindow } = new JSDOM('', { url: 'http://localhost/' });
 (globalThis as any).XMLHttpRequest = jsdomWindow.XMLHttpRequest;
+
+// `@react-native-google-signin/google-signin` envuelve un módulo nativo que no existe
+// bajo Jest. Se mockea para poder importar `authService` (y sus tests de comportamiento
+// contra el Firebase Emulator, que no ejercitan el flujo de Google sino `asegurarUsuario`).
+// `isSuccessResponse` se mockea con la misma lógica que la real (discrimina por `type`)
+// porque `authService.entrarConGoogle` la usa para angostar el `SignInResponse`.
+jest.mock('@react-native-google-signin/google-signin', () => ({
+  GoogleSignin: {
+    configure: jest.fn(),
+    hasPlayServices: jest.fn(),
+    signIn: jest.fn(),
+    signOut: jest.fn(),
+  },
+  isSuccessResponse: jest.fn((response) => response?.type === 'success'),
+}));
