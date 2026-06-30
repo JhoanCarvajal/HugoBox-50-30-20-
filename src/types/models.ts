@@ -4,7 +4,7 @@ export interface Caja {
   id: string;
   nombre: string;
   porcentaje: number;   // 0..100; suma 100 entre cajas activas
-  saldo: number;        // acumulado
+  saldo: number;        // acumulado, en CENTAVOS enteros
   esPorDefecto: boolean;
   orden: number;
   createdAt: number;    // epoch ms
@@ -14,13 +14,13 @@ export type NuevaCaja = Pick<Caja, 'nombre' | 'porcentaje'>;
 
 export interface Reparto {
   cajaId: string;
-  monto: number;
+  monto: number;            // en CENTAVOS enteros
 }
 
 export interface Transaccion {
   id: string;
   tipo: TipoMovimiento;
-  monto: number;            // positivo
+  monto: number;            // positivo, en CENTAVOS enteros
   fecha: number;            // epoch ms
   descripcion: string;
   cajaId: string | null;    // egreso → caja origen
