@@ -4,6 +4,7 @@
     "slug": "hugobox",
     "version": "1.0.0",
     "orientation": "portrait",
+    "scheme": "hugobox",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
