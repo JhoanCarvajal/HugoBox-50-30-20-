@@ -36,6 +36,19 @@ it('un egreso baja el saldo de su caja y avisa si excede', async () => {
   expect(gastos2.saldo).toBe(-30);
 });
 
+it('agregarEgreso rechaza montos no enteros o no positivos (centavos)', async () => {
+  await crearCajasPorDefecto(uid);
+  const gastos = (await listarCajas(uid))[0];
+  const base = { cajaId: gastos.id, descripcion: 'x', fecha: 1 };
+  await expect(agregarEgreso(uid, { ...base, monto: 0.5 })).rejects.toThrow();
+  await expect(agregarEgreso(uid, { ...base, monto: 0 })).rejects.toThrow();
+  await expect(agregarEgreso(uid, { ...base, monto: -10 })).rejects.toThrow();
+  // No debe haber escrito ninguna transacción ni alterado el saldo.
+  const snap = await getDocs(refTransacciones(uid));
+  expect(snap.docs.length).toBe(0);
+  expect((await listarCajas(uid))[0].saldo).toBe(0);
+});
+
 it('borrarTransaccion revierte el efecto de un ingreso en los saldos', async () => {
   await crearCajasPorDefecto(uid);
   await agregarIngreso(uid, { monto: 10000, descripcion: 'Sueldo', fecha: 1 });

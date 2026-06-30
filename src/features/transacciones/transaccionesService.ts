@@ -34,6 +34,9 @@ export async function agregarEgreso(
   { monto, cajaId, descripcion, fecha }:
     { monto: number; cajaId: string; descripcion: string; fecha: number },
 ): Promise<{ advertenciaSaldo: boolean }> {
+  if (!Number.isInteger(monto) || monto <= 0) {
+    throw new Error('El monto (en centavos) debe ser un entero positivo');
+  }
   const cajaSnap = await getDoc(doc(refCajas(uid), cajaId));
   const saldoActual = (cajaSnap.data() as Caja | undefined)?.saldo ?? 0;
   const advertenciaSaldo = monto > saldoActual;
