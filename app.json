@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "hugobox",
+    "name": "HugoBox",
     "slug": "hugobox",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -11,6 +11,8 @@
       "supportsTablet": true
     },
     "android": {
+      "package": "com.hugobox.app",
+      "versionCode": 1,
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
