@@ -3,7 +3,6 @@ import { Caja } from '../types/models';
 import { formatearMoneda } from '../utils/dinero';
 import { colorCaja, inicial } from '../utils/colorCaja';
 import { Avatar } from './ui/Avatar';
-import { ProgressBar } from './ui/ProgressBar';
 import { colors, spacing, radius, fontSize, fontWeight, shadows } from '../theme';
 
 interface Props {
@@ -16,8 +15,7 @@ interface Props {
 
 /**
  * Tarjeta de caja del dashboard "Sereno": avatar de color + nombre y
- * "% de tus ingresos", saldo a la derecha (rojo si negativo) y barra de
- * progreso del color de la caja según su porcentaje.
+ * "% de tus ingresos", saldo a la derecha (rojo si negativo).
  */
 export function CajaCard({ caja, index = 0, onPress, style }: Props) {
   const par = colorCaja(index);
@@ -45,11 +43,6 @@ export function CajaCard({ caja, index = 0, onPress, style }: Props) {
           {formatearMoneda(caja.saldo)}
         </Text>
       </View>
-      <ProgressBar
-        value={caja.porcentaje / 100}
-        color={par.color}
-        style={styles.barra}
-      />
     </Contenedor>
   );
 }
@@ -84,8 +77,5 @@ const styles = StyleSheet.create({
   },
   saldoNeg: {
     color: colors.error,
-  },
-  barra: {
-    marginTop: spacing.md,
   },
 });
