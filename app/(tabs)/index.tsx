@@ -8,6 +8,9 @@ export default function Cajas() {
   const router = useRouter();
   return (
     <View style={s.c}>
+      <Pressable onPress={() => router.push('/cajas')} style={s.gestion}>
+        <Text style={s.gestionTxt}>Gestionar cajas</Text>
+      </Pressable>
       <FlatList
         data={cajas}
         keyExtractor={(c) => c.id}
@@ -22,6 +25,8 @@ export default function Cajas() {
 }
 const s = StyleSheet.create({
   c: { flex: 1, backgroundColor: '#f4f5f7' },
+  gestion: { padding: 16 },
+  gestionTxt: { color: '#1a73e8', fontWeight: '600' },
   fab: { position: 'absolute', bottom: 24, right: 24, backgroundColor: '#1a73e8', borderRadius: 28, paddingVertical: 14, paddingHorizontal: 20 },
   fabTxt: { color: 'white', fontWeight: '700' },
 });
