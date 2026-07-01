@@ -75,7 +75,7 @@ describe('Nueva transacción', () => {
     const user = userEvent.setup();
 
     await user.type(screen.getByPlaceholderText('0.00'), '100');
-    await user.press(screen.getByText('Guardar'));
+    await user.press(screen.getByText('Registrar ingreso'));
 
     expect(crearIngreso).toHaveBeenCalledWith(10000, '');
     expect(crearEgreso).not.toHaveBeenCalled();
@@ -86,10 +86,10 @@ describe('Nueva transacción', () => {
     await render(<NuevaTx />);
     const user = userEvent.setup();
 
-    await user.press(screen.getByText('egreso'));
+    await user.press(screen.getByText('Egreso'));
     await user.press(screen.getByText('Gastos'));
     await user.type(screen.getByPlaceholderText('0.00'), '50');
-    await user.press(screen.getByText('Guardar'));
+    await user.press(screen.getByText('Registrar egreso'));
 
     expect(crearEgreso).toHaveBeenCalledWith(5000, 'c1', '');
     expect(crearIngreso).not.toHaveBeenCalled();
@@ -100,7 +100,7 @@ describe('Nueva transacción', () => {
     const user = userEvent.setup();
 
     await user.type(screen.getByPlaceholderText('0.00'), '100,50');
-    await user.press(screen.getByText('Guardar'));
+    await user.press(screen.getByText('Registrar ingreso'));
 
     expect(crearIngreso).toHaveBeenCalledWith(10050, '');
   });
@@ -109,9 +109,9 @@ describe('Nueva transacción', () => {
     await render(<NuevaTx />);
     const user = userEvent.setup();
 
-    await user.press(screen.getByText('egreso'));
+    await user.press(screen.getByText('Egreso'));
     await user.type(screen.getByPlaceholderText('0.00'), '50');
-    await user.press(screen.getByText('Guardar'));
+    await user.press(screen.getByText('Registrar egreso'));
 
     expect(await screen.findByText('Elige una caja para el egreso')).toBeTruthy();
     expect(crearEgreso).not.toHaveBeenCalled();
@@ -122,7 +122,7 @@ describe('Nueva transacción', () => {
     await render(<NuevaTx />);
     const user = userEvent.setup();
 
-    await user.press(screen.getByText('Guardar'));
+    await user.press(screen.getByText('Registrar ingreso'));
 
     expect(await screen.findByText('El monto debe ser mayor a 0')).toBeTruthy();
     expect(crearIngreso).not.toHaveBeenCalled();
@@ -196,8 +196,8 @@ describe('Nueva transacción — modo edición', () => {
     const user = userEvent.setup();
 
     await screen.findByDisplayValue('50');
-    // El tipo precargado es "egreso"; intentar pulsar "ingreso" no debe cambiarlo.
-    await user.press(screen.getByText('ingreso'));
+    // El tipo precargado es "egreso"; intentar pulsar "Ingreso" no debe cambiarlo.
+    await user.press(screen.getByText('Ingreso'));
     await user.press(screen.getByText('Guardar cambios'));
 
     expect(editar).toHaveBeenCalledWith('tx1', expect.objectContaining({ cajaId: 'c1' }));

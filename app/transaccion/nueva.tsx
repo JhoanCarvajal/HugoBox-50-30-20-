@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert,
+  View, Text, StyleSheet, ScrollView, Alert,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCajas } from '../../src/features/cajas/useCajas';
@@ -9,7 +9,11 @@ import { txFormSchema } from '../../src/features/transacciones/txSchema';
 import { obtenerTransaccion } from '../../src/features/transacciones/transaccionesService';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { aCentavos, aUnidades, parsearMonto } from '../../src/utils/dinero';
-import { colors, spacing, radius, fontSize, fontWeight } from '../../src/theme';
+import { SegmentedControl } from '../../src/components/ui/SegmentedControl';
+import { TextField } from '../../src/components/ui/TextField';
+import { Button } from '../../src/components/ui/Button';
+import { Chip } from '../../src/components/ui/Chip';
+import { colors, spacing, fontSize, fontWeight } from '../../src/theme';
 
 export default function NuevaTx() {
   const { cajas } = useCajas();
@@ -27,6 +31,9 @@ export default function NuevaTx() {
   const [descripcion, setDescripcion] = useState('');
   const [cajaId, setCajaId] = useState<string | null>(null);
   const [error, setError] = useState('');
+  // Campo al que pertenece el error de zod (issues[0].path); permite mostrarlo
+  // en la prop `error` del TextField correspondiente en vez de un texto suelto.
+  const [errorField, setErrorField] = useState('');
 
   // Modo edición: precarga la transacción existente y rellena el formulario.
   // En modo alta (sin editId) este efecto no hace nada, así que el
@@ -70,8 +77,14 @@ export default function NuevaTx() {
     const parsed = txFormSchema.safeParse({
       tipo, monto: montoNumero, descripcion, cajaId,
     });
-    if (!parsed.success) { setError(parsed.error.issues[0].message); return; }
+    if (!parsed.success) {
+      const issue = parsed.error.issues[0];
+      setError(issue.message);
+      setErrorField(String(issue.path[0] ?? ''));
+      return;
+    }
     setError('');
+    setErrorField('');
     // El input está en unidades; los servicios trabajan en centavos enteros.
     const centavos = aCentavos(montoNumero);
     try {
@@ -91,64 +104,81 @@ export default function NuevaTx() {
     }
   };
 
+  const esIngreso = tipo === 'ingreso';
+  const botonLabel = esEdicion
+    ? 'Guardar cambios'
+    : (esIngreso ? 'Registrar ingreso' : 'Registrar egreso');
+
   return (
     <ScrollView contentContainerStyle={s.c}>
-      <View style={s.tabs}>
-        {(['ingreso', 'egreso'] as const).map((t) => (
-          <Pressable
-            key={t}
-            disabled={esEdicion}
-            onPress={() => setTipo(t)}
-            style={[s.tab, tipo === t && s.tabOn, esEdicion && s.tabDisabled]}
-          >
-            <Text style={tipo === t ? s.tabTxtOn : s.tabTxt}>{t}</Text>
-          </Pressable>
-        ))}
-      </View>
-      <TextInput style={s.input} placeholder="0.00" keyboardType="numeric" value={monto} onChangeText={setMonto} />
+      <Text style={s.title}>Nueva transacción</Text>
+
+      <SegmentedControl<'ingreso' | 'egreso'>
+        options={[
+          { value: 'ingreso', label: 'Ingreso' },
+          { value: 'egreso', label: 'Egreso' },
+        ]}
+        value={tipo}
+        // En modo edición el tipo no se puede cambiar (comportamiento previo del
+        // switch deshabilitado): se ignoran los cambios.
+        onChange={esEdicion ? () => {} : setTipo}
+        activeColor={esIngreso ? colors.success : colors.error}
+      />
+
+      <TextField
+        label="Monto"
+        large
+        placeholder="0.00"
+        keyboardType="numeric"
+        value={monto}
+        onChangeText={setMonto}
+        error={errorField === 'monto' ? error : undefined}
+      />
       <Text style={s.hint}>Usa punto o coma para miles y decimales (ej: 1.500,50)</Text>
-      <TextInput style={s.input} placeholder="Descripción" value={descripcion} onChangeText={setDescripcion} />
+
+      <TextField
+        label="Descripción"
+        placeholder="Descripción"
+        value={descripcion}
+        onChangeText={setDescripcion}
+        error={errorField === 'descripcion' ? error : undefined}
+      />
+
       {tipo === 'egreso' && (
         <View style={s.cajas}>
           {cajas.map((c) => (
-            <Pressable key={c.id} onPress={() => setCajaId(c.id)} style={[s.chip, cajaId === c.id && s.chipOn]}>
-              <Text style={cajaId === c.id ? s.chipTxtOn : undefined}>{c.nombre}</Text>
-            </Pressable>
+            <Chip
+              key={c.id}
+              label={c.nombre}
+              active={cajaId === c.id}
+              onPress={() => setCajaId(c.id)}
+            />
           ))}
         </View>
       )}
-      {!!error && <Text style={s.err}>{error}</Text>}
-      <Pressable style={s.btn} onPress={guardar}>
-        <Text style={s.btnTxt}>{esEdicion ? 'Guardar cambios' : 'Guardar'}</Text>
-      </Pressable>
+      {errorField === 'cajaId' && !!error && <Text style={s.err}>{error}</Text>}
+
+      <Button
+        block
+        variant={esIngreso ? 'success' : 'destructive'}
+        label={botonLabel}
+        onPress={guardar}
+      />
     </ScrollView>
   );
 }
+
 const s = StyleSheet.create({
   c: { padding: spacing.lg, gap: spacing.md },
-  tabs: { flexDirection: 'row', gap: spacing.sm },
-  tab: {
-    flex: 1, padding: spacing.md, borderRadius: radius.sm, backgroundColor: colors.divider, alignItems: 'center',
-  },
-  tabOn: { backgroundColor: colors.primary },
-  tabDisabled: { opacity: 0.5 },
-  tabTxt: { color: colors.text.primary, textTransform: 'capitalize' },
-  tabTxtOn: { color: colors.white, textTransform: 'capitalize' },
-  input: {
-    borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md,
+  title: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    color: colors.text.primary,
+    paddingBottom: spacing.xs,
   },
   cajas: {
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
   },
-  chip: {
-    paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.divider,
-  },
-  chipOn: { backgroundColor: colors.primary },
-  chipTxtOn: { color: colors.white },
-  hint: { fontSize: fontSize.xs, color: colors.text.tertiary, marginTop: -8 },
-  err: { color: colors.error },
-  btn: {
-    backgroundColor: colors.primary, padding: spacing.lg, borderRadius: radius.sm, alignItems: 'center',
-  },
-  btnTxt: { color: colors.white, fontWeight: fontWeight.bold },
+  hint: { fontSize: fontSize.xs, color: colors.text.tertiary },
+  err: { fontSize: fontSize.sm, color: colors.error },
 });

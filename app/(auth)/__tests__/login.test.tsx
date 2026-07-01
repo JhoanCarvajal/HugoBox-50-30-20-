@@ -10,7 +10,7 @@ jest.mock('../../../src/features/auth/authService', () => ({
 }));
 
 describe('Login', () => {
-  it('llama a entrarConGoogle al presionar "Continuar con Google"', async () => {
+  it('llama a entrarConGoogle al presionar "Iniciar sesión con Google"', async () => {
     // @testing-library/react-native@14 hace `render` asíncrono (usa
     // `test-renderer`'s `createRoot` + `act` por debajo): hay que esperarlo
     // antes de consultar `screen`, si no `getByText` falla con
@@ -23,7 +23,7 @@ describe('Login', () => {
     // así que no hace falta un `waitFor` aparte ni aparecen warnings de React
     // por `setState` fuera de `act()`.
     const user = userEvent.setup();
-    await user.press(screen.getByText('Continuar con Google'));
+    await user.press(screen.getByText('Iniciar sesión con Google'));
 
     expect(entrarConGoogle).toHaveBeenCalledTimes(1);
   });

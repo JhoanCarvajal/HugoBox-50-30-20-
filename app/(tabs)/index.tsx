@@ -1,6 +1,7 @@
 import {
   View, FlatList, Pressable, Text, StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCajas } from '../../src/features/cajas/useCajas';
 import { CajaCard } from '../../src/components/CajaCard';
@@ -37,19 +38,19 @@ export default function Cajas() {
   };
 
   return (
-    <View style={s.c}>
+    <SafeAreaView style={s.c} edges={['top']}>
       <View style={s.header}>
-        <Text style={s.saludo} numberOfLines={1}>{nombreMostrado}</Text>
-        <Pressable onPress={onCerrarSesion} style={s.logout}>
-          <Text style={s.logoutTxt}>Cerrar sesión</Text>
+        <Text style={s.saludo} numberOfLines={1}>Hola, {nombreMostrado}</Text>
+        <Pressable style={s.logout} onPress={onCerrarSesion}>
+          <Text style={s.logoutTxt}>Salir</Text>
         </Pressable>
       </View>
-      <Pressable onPress={() => router.push('/cajas')} style={s.gestion}>
+      <Pressable style={s.gestion} onPress={() => router.push('/cajas')}>
         <Text style={s.gestionTxt}>Gestionar cajas</Text>
       </Pressable>
       {cargando ? (
-        <View style={s.centro} testID="dashboard-cargando">
-          <ActivityIndicator size="large" color={colors.primary} />
+        <View style={s.centro}>
+          <ActivityIndicator testID="dashboard-cargando" size="large" color={colors.primary} />
         </View>
       ) : (
         <FlatList
@@ -57,19 +58,26 @@ export default function Cajas() {
           keyExtractor={(c) => c.id}
           renderItem={({ item }) => <CajaCard caja={item} />}
           contentContainerStyle={{ padding: spacing.lg }}
-          ListEmptyComponent={
+          ListEmptyComponent={(
             <View style={s.centro}>
               <Text style={s.vacioTxt}>Aún no tienes cajas</Text>
             </View>
-          }
+          )}
         />
       )}
-      <Pressable style={s.fab} onPress={() => router.push('/transaccion/nueva')}>
-        <Text style={s.fabTxt}>＋ Movimiento</Text>
+      <Pressable
+        testID="dashboard-fab"
+        style={s.fab}
+        onPress={() => router.push('/transaccion/nueva')}
+        accessibilityRole="button"
+        accessibilityLabel="Nuevo movimiento"
+      >
+        <Text style={s.fabTxt}>+</Text>
       </Pressable>
-    </View>
+    </SafeAreaView>
   );
 }
+
 const s = StyleSheet.create({
   c: { flex: 1, backgroundColor: colors.background },
   header: {
@@ -77,11 +85,26 @@ const s = StyleSheet.create({
   },
   saludo: { flexShrink: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text.primary },
   logout: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  logoutTxt: { color: colors.error, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
-  gestion: { padding: spacing.lg },
+  logoutTxt: { color: colors.primary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
+  gestion: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
   gestionTxt: { color: colors.primary, fontWeight: fontWeight.semibold },
-  centro: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  centro: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
   vacioTxt: { color: colors.text.tertiary, fontSize: fontSize.md },
-  fab: { position: 'absolute', bottom: spacing.xxl, right: spacing.xxl, backgroundColor: colors.primary, borderRadius: radius.pill, paddingVertical: spacing.lg, paddingHorizontal: spacing.xl },
-  fabTxt: { color: colors.white, fontWeight: fontWeight.bold },
+  fab: {
+    position: 'absolute',
+    bottom: spacing.xxl,
+    right: spacing.xl,
+    width: 56,
+    height: 56,
+    borderRadius: radius.pill,
+    backgroundColor: colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.45,
+    shadowRadius: 12,
+    elevation: 6,
+  },
+  fabTxt: { color: colors.white, fontSize: 30, fontWeight: fontWeight.bold, lineHeight: 34 },
 });

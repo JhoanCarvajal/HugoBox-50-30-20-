@@ -70,14 +70,14 @@ describe('Dashboard (cajas)', () => {
 
     expect(screen.getByText('Gastos')).toBeTruthy();
     expect(screen.getByText('Gestionar cajas')).toBeTruthy();
-    expect(screen.getByText('＋ Movimiento')).toBeTruthy();
+    expect(screen.getByTestId('dashboard-fab')).toBeTruthy();
   });
 
-  it('muestra el nombre del usuario y el botón "Cerrar sesión" en el encabezado', async () => {
+  it('muestra el nombre del usuario y el botón "Salir" en el encabezado', async () => {
     await render(<Cajas />);
 
-    expect(screen.getByText('Damian')).toBeTruthy();
-    expect(screen.getByText('Cerrar sesión')).toBeTruthy();
+    expect(screen.getByText('Hola, Damian')).toBeTruthy();
+    expect(screen.getByText('Salir')).toBeTruthy();
   });
 
   it('si el usuario no tiene displayName, muestra su email', async () => {
@@ -90,14 +90,14 @@ describe('Dashboard (cajas)', () => {
 
     await render(<Cajas />);
 
-    expect(screen.getByText('sin-nombre@example.com')).toBeTruthy();
+    expect(screen.getByText('Hola, sin-nombre@example.com')).toBeTruthy();
   });
 
-  it('pulsar "Cerrar sesión" pide confirmación antes de cerrar sesión', async () => {
+  it('pulsar "Salir" pide confirmación antes de cerrar sesión', async () => {
     await render(<Cajas />);
     const user = userEvent.setup();
 
-    await user.press(screen.getByText('Cerrar sesión'));
+    await user.press(screen.getByText('Salir'));
 
     expect(Alert.alert).toHaveBeenCalledWith(
       'Cerrar sesión',
@@ -114,7 +114,7 @@ describe('Dashboard (cajas)', () => {
     await render(<Cajas />);
     const user = userEvent.setup();
 
-    await user.press(screen.getByText('Cerrar sesión'));
+    await user.press(screen.getByText('Salir'));
 
     const botones = (Alert.alert as jest.Mock).mock.calls[0][2];
     const botonSalir = botones.find((b: { text: string }) => b.text === 'Salir');
