@@ -5,6 +5,7 @@ import { useHistorial } from '../../../src/features/transacciones/useHistorial';
 import { useCajas } from '../../../src/features/cajas/useCajas';
 import { borrarTransaccion } from '../../../src/features/transacciones/transaccionesService';
 import { useSessionStore } from '../../../src/stores/sessionStore';
+import { formatearFecha } from '../../../src/utils/fecha';
 
 // Se mockea `useHistorial` (capa de datos en tiempo real de Firestore) para no
 // depender del emulador: solo se necesita una lista fija de transacciones
@@ -72,5 +73,20 @@ describe('Historial', () => {
     botonBorrar.onPress();
 
     expect(borrarTransaccion).toHaveBeenCalledWith('u1', 'tx1');
+  });
+
+  it('muestra la fecha del movimiento en la fila', async () => {
+    await render(<Historial />);
+
+    expect(screen.getByText(formatearFecha(2))).toBeTruthy();
+  });
+
+  it('sin movimientos muestra el mensaje de estado vacío', async () => {
+    (useHistorial as jest.Mock).mockReturnValue({ items: [] });
+
+    await render(<Historial />);
+
+    expect(screen.getByText('Aún no tienes movimientos')).toBeTruthy();
+    expect(screen.queryByText('Mercado')).toBeNull();
   });
 });

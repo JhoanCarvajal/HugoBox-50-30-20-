@@ -52,7 +52,8 @@ export default function NuevaTx() {
           </Pressable>
         ))}
       </View>
-      <TextInput style={s.input} placeholder="Monto" keyboardType="numeric" value={monto} onChangeText={setMonto} />
+      <TextInput style={s.input} placeholder="0.00" keyboardType="numeric" value={monto} onChangeText={setMonto} />
+      <Text style={s.hint}>Usa punto o coma solo para decimales (ej: 1500.50)</Text>
       <TextInput style={s.input} placeholder="Descripción" value={descripcion} onChangeText={setDescripcion} />
       {tipo === 'egreso' && (
         <View style={s.cajas}>
@@ -88,6 +89,7 @@ const s = StyleSheet.create({
   },
   chipOn: { backgroundColor: '#1a73e8' },
   chipTxtOn: { color: 'white' },
+  hint: { fontSize: 12, color: '#888', marginTop: -8 },
   err: { color: '#d32f2f' },
   btn: {
     backgroundColor: '#1a73e8', padding: 14, borderRadius: 10, alignItems: 'center',

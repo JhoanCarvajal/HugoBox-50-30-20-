@@ -5,6 +5,7 @@ import { useCajas } from '../../src/features/cajas/useCajas';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { borrarTransaccion } from '../../src/features/transacciones/transaccionesService';
 import { formatearMoneda } from '../../src/utils/dinero';
+import { formatearFecha } from '../../src/utils/fecha';
 
 export default function Historial() {
   const [filtro, setFiltro] = useState<string | null>(null);
@@ -46,12 +47,20 @@ export default function Historial() {
         keyExtractor={(t) => t.id}
         renderItem={({ item }) => (
           <Pressable onLongPress={() => onBorrar(item.id)} style={s.row}>
-            <Text style={s.desc}>{item.descripcion || item.tipo}</Text>
+            <View style={s.info}>
+              <Text style={s.desc}>{item.descripcion || item.tipo}</Text>
+              <Text style={s.fecha}>{formatearFecha(item.fecha)}</Text>
+            </View>
             <Text style={item.tipo === 'ingreso' ? s.in : s.out}>
               {item.tipo === 'ingreso' ? '+' : '-'}{formatearMoneda(item.monto)}
             </Text>
           </Pressable>
         )}
+        ListEmptyComponent={
+          <View style={s.vacio}>
+            <Text style={s.vacioTxt}>Aún no tienes movimientos</Text>
+          </View>
+        }
       />
     </View>
   );
@@ -62,7 +71,11 @@ const s = StyleSheet.create({
   chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14, backgroundColor: '#eee' },
   chipOn: { backgroundColor: '#cfe0fc' },
   row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderColor: '#eee' },
+  info: { flexShrink: 1 },
   desc: { fontSize: 15 },
+  fecha: { fontSize: 12, color: '#999', marginTop: 2 },
   in: { color: '#2e7d32', fontWeight: '600' },
   out: { color: '#d32f2f', fontWeight: '600' },
+  vacio: { paddingTop: 48, alignItems: 'center' },
+  vacioTxt: { color: '#888', fontSize: 15 },
 });

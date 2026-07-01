@@ -55,7 +55,7 @@ describe('Nueva transacción', () => {
     await render(<NuevaTx />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByPlaceholderText('Monto'), '100');
+    await user.type(screen.getByPlaceholderText('0.00'), '100');
     await user.press(screen.getByText('Guardar'));
 
     expect(crearIngreso).toHaveBeenCalledWith(10000, '');
@@ -69,7 +69,7 @@ describe('Nueva transacción', () => {
 
     await user.press(screen.getByText('egreso'));
     await user.press(screen.getByText('Gastos'));
-    await user.type(screen.getByPlaceholderText('Monto'), '50');
+    await user.type(screen.getByPlaceholderText('0.00'), '50');
     await user.press(screen.getByText('Guardar'));
 
     expect(crearEgreso).toHaveBeenCalledWith(5000, 'c1', '');
@@ -80,7 +80,7 @@ describe('Nueva transacción', () => {
     await render(<NuevaTx />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByPlaceholderText('Monto'), '100,50');
+    await user.type(screen.getByPlaceholderText('0.00'), '100,50');
     await user.press(screen.getByText('Guardar'));
 
     expect(crearIngreso).toHaveBeenCalledWith(10050, '');
@@ -91,7 +91,7 @@ describe('Nueva transacción', () => {
     const user = userEvent.setup();
 
     await user.press(screen.getByText('egreso'));
-    await user.type(screen.getByPlaceholderText('Monto'), '50');
+    await user.type(screen.getByPlaceholderText('0.00'), '50');
     await user.press(screen.getByText('Guardar'));
 
     expect(await screen.findByText('Elige una caja para el egreso')).toBeTruthy();
@@ -108,5 +108,12 @@ describe('Nueva transacción', () => {
     expect(await screen.findByText('El monto debe ser mayor a 0')).toBeTruthy();
     expect(crearIngreso).not.toHaveBeenCalled();
     expect(crearEgreso).not.toHaveBeenCalled();
+  });
+
+  it('muestra un hint aclarando el uso de punto/coma para decimales', async () => {
+    await render(<NuevaTx />);
+
+    expect(screen.getByPlaceholderText('0.00')).toBeTruthy();
+    expect(screen.getByText('Usa punto o coma solo para decimales (ej: 1500.50)')).toBeTruthy();
   });
 });
