@@ -6,7 +6,7 @@ import { useRouter } from 'expo-router';
 import { useCajas } from '../../src/features/cajas/useCajas';
 import { useTransacciones } from '../../src/features/transacciones/useTransacciones';
 import { txFormSchema } from '../../src/features/transacciones/txSchema';
-import { aCentavos } from '../../src/utils/dinero';
+import { aCentavos, parsearMonto } from '../../src/utils/dinero';
 
 export default function NuevaTx() {
   const { cajas } = useCajas();
@@ -19,11 +19,13 @@ export default function NuevaTx() {
   const [error, setError] = useState('');
 
   const guardar = async () => {
-    // En es-CO el separador decimal habitual es la coma ("100,50"), pero
-    // `Number("100,50")` da NaN. Se normaliza coma→punto antes de convertir,
-    // así el teclado numérico del dispositivo (que en muchos locales solo
-    // ofrece coma) no rompe la validación.
-    const montoNumero = Number(monto.replace(',', '.'));
+    // En es-CO el separador decimal habitual es la coma ("100,50") y el de
+    // miles puede ser punto o coma ("1.000" / "1,000"). `parsearMonto`
+    // detecta cuál separador es el decimal (el último, si le siguen 1 o 2
+    // dígitos) y descarta los demás como separadores de miles, así el
+    // teclado numérico del dispositivo no rompe la validación ni produce
+    // montos 1000x menores por confundir miles con decimales.
+    const montoNumero = parsearMonto(monto);
     const parsed = txFormSchema.safeParse({
       tipo, monto: montoNumero, descripcion, cajaId,
     });
@@ -53,7 +55,7 @@ export default function NuevaTx() {
         ))}
       </View>
       <TextInput style={s.input} placeholder="0.00" keyboardType="numeric" value={monto} onChangeText={setMonto} />
-      <Text style={s.hint}>Usa punto o coma solo para decimales (ej: 1500.50)</Text>
+      <Text style={s.hint}>Usa punto o coma para miles y decimales (ej: 1.500,50)</Text>
       <TextInput style={s.input} placeholder="Descripción" value={descripcion} onChangeText={setDescripcion} />
       {tipo === 'egreso' && (
         <View style={s.cajas}>

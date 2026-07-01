@@ -1,8 +1,8 @@
 import { GoogleSignin, isSuccessResponse } from '@react-native-google-signin/google-signin';
 import { GoogleAuthProvider, signInWithCredential, signOut } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc } from 'firebase/firestore';
 import { auth, db } from '../../lib/firebase';
-import { crearCajasPorDefecto } from '../cajas/cajasService';
+import { crearCajasPorDefecto, refCajas } from '../cajas/cajasService';
 import { Usuario } from '../../types/models';
 
 export function configurarGoogle() {
@@ -40,14 +40,23 @@ export async function asegurarUsuario(u: {
 }): Promise<Usuario> {
   const ref = doc(db, 'users', u.uid);
   const snap = await getDoc(ref);
+  let usuario: Usuario;
   if (!snap.exists()) {
-    const nuevo: Usuario = {
+    usuario = {
       uid: u.uid, email: u.email, displayName: u.displayName,
       monedaPreferida: 'COP', createdAt: Date.now(),
     };
-    await setDoc(ref, nuevo);
-    await crearCajasPorDefecto(u.uid);
-    return nuevo;
+    await setDoc(ref, usuario);
+  } else {
+    usuario = snap.data() as Usuario;
   }
-  return snap.data() as Usuario;
+  // Recuperación idempotente: si el doc de usuario existe pero las cajas
+  // nunca se llegaron a crear (el proceso murió entre el setDoc y
+  // crearCajasPorDefecto en un login anterior), se repara aquí en vez de
+  // dejar al usuario sin cajas para siempre.
+  const cajasSnap = await getDocs(refCajas(u.uid));
+  if (cajasSnap.empty) {
+    await crearCajasPorDefecto(u.uid);
+  }
+  return usuario;
 }

@@ -114,6 +114,6 @@ describe('Nueva transacción', () => {
     await render(<NuevaTx />);
 
     expect(screen.getByPlaceholderText('0.00')).toBeTruthy();
-    expect(screen.getByText('Usa punto o coma solo para decimales (ej: 1500.50)')).toBeTruthy();
+    expect(screen.getByText('Usa punto o coma para miles y decimales (ej: 1.500,50)')).toBeTruthy();
   });
 });
