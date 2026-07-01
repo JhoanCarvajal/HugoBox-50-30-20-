@@ -1,17 +1,31 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View, FlatList, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { useHistorial } from '../../src/features/transacciones/useHistorial';
 import { useCajas } from '../../src/features/cajas/useCajas';
+import { filtrarHistorial, rangoFecha, ClaveRangoFecha } from '../../src/features/transacciones/filtros';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { borrarTransaccion } from '../../src/features/transacciones/transaccionesService';
 import { formatearMoneda } from '../../src/utils/dinero';
 import { formatearFecha } from '../../src/utils/fecha';
 
+const OPCIONES_FECHA: { clave: ClaveRangoFecha; etiqueta: string }[] = [
+  { clave: 'todo', etiqueta: 'Todo' },
+  { clave: 'mes', etiqueta: 'Este mes' },
+  { clave: 'mesPasado', etiqueta: 'Mes pasado' },
+  { clave: 'anio', etiqueta: 'Este año' },
+];
+
 export default function Historial() {
-  const [filtro, setFiltro] = useState<string | null>(null);
-  const { items } = useHistorial(filtro);
+  const [filtroCaja, setFiltroCaja] = useState<string | null>(null);
+  const [filtroFecha, setFiltroFecha] = useState<ClaveRangoFecha>('todo');
+  const { items } = useHistorial();
   const { cajas } = useCajas();
   const uid = useSessionStore((s) => s.usuario?.uid);
+
+  const itemsFiltrados = useMemo(() => {
+    const { desde, hasta } = rangoFecha(filtroFecha, Date.now());
+    return filtrarHistorial(items, { cajaId: filtroCaja, desde, hasta });
+  }, [items, filtroCaja, filtroFecha]);
 
   const onBorrar = (id: string) =>
     Alert.alert('Borrar', '¿Eliminar este movimiento? Se revertirán los saldos.', [
@@ -36,14 +50,28 @@ export default function Historial() {
   return (
     <View style={s.c}>
       <View style={s.filtros}>
-        <Pressable onPress={() => setFiltro(null)} style={[s.chip, !filtro && s.chipOn]}><Text>Todas</Text></Pressable>
+        <Pressable onPress={() => setFiltroCaja(null)} style={[s.chip, !filtroCaja && s.chipOn]}>
+          <Text>Todas</Text>
+        </Pressable>
         {cajas.map((c) => (
-          <Pressable key={c.id} onPress={() => setFiltro(c.id)} style={[s.chip, filtro === c.id && s.chipOn]}>
-            <Text>{c.nombre}</Text></Pressable>
+          <Pressable key={c.id} onPress={() => setFiltroCaja(c.id)} style={[s.chip, filtroCaja === c.id && s.chipOn]}>
+            <Text>{c.nombre}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <View style={s.filtros}>
+        {OPCIONES_FECHA.map((o) => (
+          <Pressable
+            key={o.clave}
+            onPress={() => setFiltroFecha(o.clave)}
+            style={[s.chip, filtroFecha === o.clave && s.chipOn]}
+          >
+            <Text>{o.etiqueta}</Text>
+          </Pressable>
         ))}
       </View>
       <FlatList
-        data={items}
+        data={itemsFiltrados}
         keyExtractor={(t) => t.id}
         renderItem={({ item }) => (
           <Pressable onLongPress={() => onBorrar(item.id)} style={s.row}>

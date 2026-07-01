@@ -9,7 +9,9 @@ import { formatearFecha } from '../../../src/utils/fecha';
 
 // Se mockea `useHistorial` (capa de datos en tiempo real de Firestore) para no
 // depender del emulador: solo se necesita una lista fija de transacciones
-// para poder interactuar con una fila.
+// para poder interactuar con una fila. `filtrarHistorial`/`rangoFecha` NO se
+// mockean: son funciones puras y se ejercitan de verdad para probar el
+// filtrado en la pantalla.
 jest.mock('../../../src/features/transacciones/useHistorial', () => ({
   useHistorial: jest.fn(),
 }));
@@ -26,6 +28,13 @@ jest.mock('../../../src/features/transacciones/transaccionesService', () => ({
   borrarTransaccion: jest.fn(),
 }));
 
+const cajaA = {
+  id: 'c1', nombre: 'Gastos', porcentaje: 50, saldo: 0, esPorDefecto: true, orden: 0, createdAt: 1,
+};
+const cajaB = {
+  id: 'c2', nombre: 'Ahorro', porcentaje: 50, saldo: 0, esPorDefecto: true, orden: 1, createdAt: 1,
+};
+
 const itemsMock = [
   {
     id: 'tx1', tipo: 'egreso' as const, monto: 5000, fecha: 2, descripcion: 'Mercado', cajaId: 'c1', reparto: [], createdAt: 2,
@@ -35,7 +44,7 @@ const itemsMock = [
 describe('Historial', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    (useHistorial as jest.Mock).mockReturnValue({ items: itemsMock });
+    (useHistorial as jest.Mock).mockReturnValue({ items: itemsMock, cargando: false });
     (useCajas as jest.Mock).mockReturnValue({ cajas: [] });
     useSessionStore.setState({
       usuario: {
@@ -82,11 +91,74 @@ describe('Historial', () => {
   });
 
   it('sin movimientos muestra el mensaje de estado vacío', async () => {
-    (useHistorial as jest.Mock).mockReturnValue({ items: [] });
+    (useHistorial as jest.Mock).mockReturnValue({ items: [], cargando: false });
 
     await render(<Historial />);
 
     expect(screen.getByText('Aún no tienes movimientos')).toBeTruthy();
     expect(screen.queryByText('Mercado')).toBeNull();
+  });
+
+  it('muestra chips de rango de fecha además de los chips de caja', async () => {
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+
+    await render(<Historial />);
+
+    expect(screen.getByText('Todo')).toBeTruthy();
+    expect(screen.getByText('Este mes')).toBeTruthy();
+    expect(screen.getByText('Mes pasado')).toBeTruthy();
+    expect(screen.getByText('Este año')).toBeTruthy();
+    expect(screen.getByText('Todas')).toBeTruthy();
+    expect(screen.getByText('Gastos')).toBeTruthy();
+    expect(screen.getByText('Ahorro')).toBeTruthy();
+  });
+
+  it(
+    'el filtro por caja incluye ingresos cuyo reparto tocó esa caja '
+    + '(IMP-4) y excluye movimientos de otras cajas',
+    async () => {
+      (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+      (useHistorial as jest.Mock).mockReturnValue({
+        items: [
+          {
+            id: 'ingreso-1', tipo: 'ingreso', monto: 10000, fecha: 3, descripcion: 'Sueldo', cajaId: null, reparto: [{ cajaId: 'c1', monto: 5000 }, { cajaId: 'c2', monto: 5000 }], createdAt: 3,
+          },
+          {
+            id: 'egreso-c1', tipo: 'egreso', monto: 1000, fecha: 2, descripcion: 'Mercado', cajaId: 'c1', reparto: [], createdAt: 2,
+          },
+          {
+            id: 'egreso-c2', tipo: 'egreso', monto: 2000, fecha: 1, descripcion: 'Ropa', cajaId: 'c2', reparto: [], createdAt: 1,
+          },
+        ],
+        cargando: false,
+      });
+      const user = userEvent.setup();
+
+      await render(<Historial />);
+      await user.press(screen.getByText('Gastos'));
+
+      expect(screen.getByText('Sueldo')).toBeTruthy();
+      expect(screen.getByText('Mercado')).toBeTruthy();
+      expect(screen.queryByText('Ropa')).toBeNull();
+    },
+  );
+
+  it('cuando el filtro no arroja resultados se muestra el estado vacío aunque sí haya movimientos', async () => {
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [
+        {
+          id: 'egreso-c2', tipo: 'egreso', monto: 2000, fecha: 1, descripcion: 'Ropa', cajaId: 'c2', reparto: [], createdAt: 1,
+        },
+      ],
+      cargando: false,
+    });
+    const user = userEvent.setup();
+
+    await render(<Historial />);
+    await user.press(screen.getByText('Gastos'));
+
+    expect(screen.getByText('Aún no tienes movimientos')).toBeTruthy();
+    expect(screen.queryByText('Ropa')).toBeNull();
   });
 });

@@ -20,56 +20,30 @@ beforeEach(async () => {
   });
 });
 
-it('sin filtro trae todas las transacciones ordenadas por fecha descendente', async () => {
-  await crearCajasPorDefecto(uid);
-  const gastos = (await listarCajas(uid)).find((c) => c.nombre === 'Gastos')!;
-
-  await agregarIngreso(uid, { monto: 10000, descripcion: 'Sueldo', fecha: 1 });
-  await agregarEgreso(uid, {
-    monto: 500, cajaId: gastos.id, descripcion: 'Mercado', fecha: 2,
-  });
-  await agregarIngreso(uid, { monto: 2000, descripcion: 'Extra', fecha: 3 });
-
-  const { result } = await renderHook(() => useHistorial(null));
-
-  await waitFor(() => {
-    expect(result.current.items).toHaveLength(3);
-  });
-
-  expect(result.current.items.map((t) => t.fecha)).toEqual([3, 2, 1]);
-});
-
+// El filtrado por caja/fecha se movió a `filtrarHistorial` (unit, ver
+// filtros.test.ts): el hook ahora solo trae TODO el historial del usuario.
 it(
-  'con filtro por caja trae solo los egresos de esa caja '
-  + '(los ingresos se guardan con cajaId:null porque se reparten entre cajas)',
+  'trae todas las transacciones del usuario (ingresos y egresos) ordenadas por fecha descendente',
   async () => {
     await crearCajasPorDefecto(uid);
-    const cajas = await listarCajas(uid);
-    const cajaA = cajas.find((c) => c.nombre === 'Gastos')!;
-    const cajaB = cajas.find((c) => c.nombre === 'Ahorro')!;
+    const gastos = (await listarCajas(uid)).find((c) => c.nombre === 'Gastos')!;
 
-    // Ingreso inicial para tener saldo en ambas cajas (cajaId: null, no debe aparecer al filtrar).
-    await agregarIngreso(uid, { monto: 100000, descripcion: 'Sueldo', fecha: 1 });
-    // 2 egresos en la caja A.
+    await agregarIngreso(uid, { monto: 10000, descripcion: 'Sueldo', fecha: 1 });
     await agregarEgreso(uid, {
-      monto: 1000, cajaId: cajaA.id, descripcion: 'Mercado', fecha: 2,
+      monto: 500, cajaId: gastos.id, descripcion: 'Mercado', fecha: 2,
     });
-    await agregarEgreso(uid, {
-      monto: 2000, cajaId: cajaA.id, descripcion: 'Transporte', fecha: 3,
-    });
-    // 1 egreso en la caja B (no debe aparecer al filtrar por A).
-    await agregarEgreso(uid, {
-      monto: 3000, cajaId: cajaB.id, descripcion: 'Otro', fecha: 4,
-    });
+    await agregarIngreso(uid, { monto: 2000, descripcion: 'Extra', fecha: 3 });
 
-    const { result } = await renderHook(() => useHistorial(cajaA.id));
+    const { result } = await renderHook(() => useHistorial());
 
     await waitFor(() => {
-      expect(result.current.items).toHaveLength(2);
+      expect(result.current.items).toHaveLength(3);
     });
 
-    expect(result.current.items.every((t) => t.cajaId === cajaA.id)).toBe(true);
-    expect(result.current.items.every((t) => t.tipo === 'egreso')).toBe(true);
-    expect(result.current.items.map((t) => t.fecha)).toEqual([3, 2]);
+    expect(result.current.items.map((t) => t.fecha)).toEqual([3, 2, 1]);
+    expect(result.current.items.map((t) => t.tipo).sort()).toEqual(
+      ['egreso', 'ingreso', 'ingreso'].sort(),
+    );
+    expect(result.current.cargando).toBe(false);
   },
 );
