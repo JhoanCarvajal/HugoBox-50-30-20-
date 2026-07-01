@@ -132,7 +132,12 @@ export async function editarTransaccion(
   } else {
     nuevaCajaId = cambios.cajaId ?? original.cajaId;
     if (nuevaCajaId) {
-      const saldoDisponible = saldoPorCaja.get(nuevaCajaId) ?? 0;
+      // El saldo disponible real es el actual MÁS lo que devuelve la reversión
+      // del egreso original, pero solo si este sale de la MISMA caja (si el
+      // egreso cambia de caja, la reversión va a la caja vieja y no cuenta para
+      // la nueva). Así el aviso no da falsos positivos al editar el monto.
+      const saldoDisponible = (saldoPorCaja.get(nuevaCajaId) ?? 0)
+        + (nuevaCajaId === original.cajaId ? original.monto : 0);
       advertenciaSaldo = cambios.monto > saldoDisponible;
       add(nuevaCajaId, -cambios.monto);
     }

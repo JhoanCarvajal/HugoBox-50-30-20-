@@ -34,12 +34,26 @@ export default function NuevaTx() {
     if (!editId || !uid) return;
     let cancelado = false;
     (async () => {
-      const tx = await obtenerTransaccion(uid, editId);
-      if (cancelado || !tx) return;
-      setTipo(tx.tipo);
-      setMonto(String(aUnidades(tx.monto)));
-      setDescripcion(tx.descripcion);
-      setCajaId(tx.cajaId);
+      try {
+        const tx = await obtenerTransaccion(uid, editId);
+        if (cancelado) return;
+        if (!tx) {
+          // La transacción ya no existe (p.ej. se borró en otro dispositivo).
+          Alert.alert('No se encontró el movimiento', 'Es posible que ya se haya borrado.');
+          router.back();
+          return;
+        }
+        setTipo(tx.tipo);
+        setMonto(String(aUnidades(tx.monto)));
+        setDescripcion(tx.descripcion);
+        setCajaId(tx.cajaId);
+      } catch (err) {
+        if (cancelado) return;
+        // Fallo de red/Firestore al cargar: se informa y se vuelve en lugar de
+        // dejar un formulario de edición vacío que sobrescribiría el movimiento.
+        Alert.alert('No se pudo cargar el movimiento', err instanceof Error ? err.message : String(err));
+        router.back();
+      }
     })();
     return () => { cancelado = true; };
   }, [editId, uid]);
