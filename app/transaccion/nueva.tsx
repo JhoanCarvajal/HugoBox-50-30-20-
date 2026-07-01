@@ -1,10 +1,89 @@
-// Placeholder — se reemplaza en la Tarea 12
-import { View, Text } from 'react-native';
+import { useState } from 'react';
+import {
+  View, Text, TextInput, Pressable, StyleSheet, ScrollView,
+} from 'react-native';
+import { useRouter } from 'expo-router';
+import { useCajas } from '../../src/features/cajas/useCajas';
+import { useTransacciones } from '../../src/features/transacciones/useTransacciones';
+import { txFormSchema } from '../../src/features/transacciones/txSchema';
+import { aCentavos } from '../../src/utils/dinero';
 
-export default function NuevaTransaccion() {
+export default function NuevaTx() {
+  const { cajas } = useCajas();
+  const { crearIngreso, crearEgreso } = useTransacciones();
+  const router = useRouter();
+  const [tipo, setTipo] = useState<'ingreso' | 'egreso'>('ingreso');
+  const [monto, setMonto] = useState('');
+  const [descripcion, setDescripcion] = useState('');
+  const [cajaId, setCajaId] = useState<string | null>(null);
+  const [error, setError] = useState('');
+
+  const guardar = async () => {
+    // En es-CO el separador decimal habitual es la coma ("100,50"), pero
+    // `Number("100,50")` da NaN. Se normaliza coma→punto antes de convertir,
+    // así el teclado numérico del dispositivo (que en muchos locales solo
+    // ofrece coma) no rompe la validación.
+    const montoNumero = Number(monto.replace(',', '.'));
+    const parsed = txFormSchema.safeParse({
+      tipo, monto: montoNumero, descripcion, cajaId,
+    });
+    if (!parsed.success) { setError(parsed.error.issues[0].message); return; }
+    setError('');
+    // El input está en unidades; los servicios trabajan en centavos enteros.
+    const centavos = aCentavos(montoNumero);
+    if (tipo === 'ingreso') await crearIngreso(centavos, descripcion);
+    else await crearEgreso(centavos, cajaId!, descripcion);
+    router.back();
+  };
+
   return (
-    <View>
-      <Text>Nueva transacción</Text>
-    </View>
+    <ScrollView contentContainerStyle={s.c}>
+      <View style={s.tabs}>
+        {(['ingreso', 'egreso'] as const).map((t) => (
+          <Pressable key={t} onPress={() => setTipo(t)} style={[s.tab, tipo === t && s.tabOn]}>
+            <Text style={tipo === t ? s.tabTxtOn : s.tabTxt}>{t}</Text>
+          </Pressable>
+        ))}
+      </View>
+      <TextInput style={s.input} placeholder="Monto" keyboardType="numeric" value={monto} onChangeText={setMonto} />
+      <TextInput style={s.input} placeholder="Descripción" value={descripcion} onChangeText={setDescripcion} />
+      {tipo === 'egreso' && (
+        <View style={s.cajas}>
+          {cajas.map((c) => (
+            <Pressable key={c.id} onPress={() => setCajaId(c.id)} style={[s.chip, cajaId === c.id && s.chipOn]}>
+              <Text style={cajaId === c.id ? s.chipTxtOn : undefined}>{c.nombre}</Text>
+            </Pressable>
+          ))}
+        </View>
+      )}
+      {!!error && <Text style={s.err}>{error}</Text>}
+      <Pressable style={s.btn} onPress={guardar}><Text style={s.btnTxt}>Guardar</Text></Pressable>
+    </ScrollView>
   );
 }
+const s = StyleSheet.create({
+  c: { padding: 16, gap: 12 },
+  tabs: { flexDirection: 'row', gap: 8 },
+  tab: {
+    flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#eee', alignItems: 'center',
+  },
+  tabOn: { backgroundColor: '#1a73e8' },
+  tabTxt: { color: '#333', textTransform: 'capitalize' },
+  tabTxtOn: { color: 'white', textTransform: 'capitalize' },
+  input: {
+    borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12,
+  },
+  cajas: {
+    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+  },
+  chip: {
+    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 16, backgroundColor: '#eee',
+  },
+  chipOn: { backgroundColor: '#1a73e8' },
+  chipTxtOn: { color: 'white' },
+  err: { color: '#d32f2f' },
+  btn: {
+    backgroundColor: '#1a73e8', padding: 14, borderRadius: 10, alignItems: 'center',
+  },
+  btnTxt: { color: 'white', fontWeight: '700' },
+});
