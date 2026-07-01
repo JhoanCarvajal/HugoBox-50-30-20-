@@ -7,6 +7,7 @@ import { useCajas } from '../src/features/cajas/useCajas';
 import { useSessionStore } from '../src/stores/sessionStore';
 import { crearCaja, actualizarPorcentajes } from '../src/features/cajas/cajasService';
 import { nuevaCajaSchema } from '../src/features/cajas/cajasSchema';
+import { colors, spacing, radius, fontSize, fontWeight } from '../src/theme';
 
 export default function GestionCajas() {
   const { cajas } = useCajas();
@@ -116,23 +117,23 @@ export default function GestionCajas() {
   );
 }
 const s = StyleSheet.create({
-  c: { padding: 16, gap: 10 },
-  back: { paddingVertical: 4 },
-  backTxt: { color: '#1a73e8', fontWeight: '600' },
-  h: { fontSize: 16, fontWeight: '700', marginTop: 12 },
-  suma: { color: '#2e7d32', fontWeight: '600' },
-  sumaError: { color: '#d32f2f' },
-  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  c: { padding: spacing.lg, gap: spacing.md },
+  back: { paddingVertical: spacing.xs },
+  backTxt: { color: colors.primary, fontWeight: fontWeight.semibold },
+  h: { fontSize: fontSize.md, fontWeight: fontWeight.bold, marginTop: spacing.md },
+  suma: { color: colors.success, fontWeight: fontWeight.semibold },
+  sumaError: { color: colors.error },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm },
   nombre: { flex: 1 },
   pct: {
-    borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 8, width: 64, textAlign: 'right',
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.sm, width: 64, textAlign: 'right',
   },
   input: {
-    borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md,
   },
-  err: { color: '#d32f2f' },
+  err: { color: colors.error },
   btn: {
-    backgroundColor: '#1a73e8', padding: 12, borderRadius: 10, alignItems: 'center', marginTop: 6,
+    backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.sm, alignItems: 'center', marginTop: spacing.sm,
   },
-  btnTxt: { color: 'white', fontWeight: '700' },
+  btnTxt: { color: colors.white, fontWeight: fontWeight.bold },
 });

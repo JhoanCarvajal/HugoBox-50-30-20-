@@ -8,6 +8,7 @@ import { useSessionStore } from '../../src/stores/sessionStore';
 import { borrarTransaccion } from '../../src/features/transacciones/transaccionesService';
 import { formatearMoneda } from '../../src/utils/dinero';
 import { formatearFecha } from '../../src/utils/fecha';
+import { colors, spacing, radius, fontSize, fontWeight } from '../../src/theme';
 
 const OPCIONES_FECHA: { clave: ClaveRangoFecha; etiqueta: string }[] = [
   { clave: 'todo', etiqueta: 'Todo' },
@@ -102,16 +103,16 @@ export default function Historial() {
   );
 }
 const s = StyleSheet.create({
-  c: { flex: 1, padding: 12 },
-  filtros: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 8 },
-  chip: { paddingVertical: 6, paddingHorizontal: 12, borderRadius: 14, backgroundColor: '#eee' },
-  chipOn: { backgroundColor: '#cfe0fc' },
-  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderColor: '#eee' },
+  c: { flex: 1, padding: spacing.md },
+  filtros: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
+  chip: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, borderRadius: radius.md, backgroundColor: colors.divider },
+  chipOn: { backgroundColor: colors.primaryLight },
+  row: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spacing.md, borderBottomWidth: 1, borderColor: colors.divider },
   info: { flexShrink: 1 },
-  desc: { fontSize: 15 },
-  fecha: { fontSize: 12, color: '#999', marginTop: 2 },
-  in: { color: '#2e7d32', fontWeight: '600' },
-  out: { color: '#d32f2f', fontWeight: '600' },
+  desc: { fontSize: fontSize.md },
+  fecha: { fontSize: fontSize.xs, color: colors.text.quaternary, marginTop: 2 },
+  in: { color: colors.success, fontWeight: fontWeight.semibold },
+  out: { color: colors.error, fontWeight: fontWeight.semibold },
   vacio: { paddingTop: 48, alignItems: 'center' },
-  vacioTxt: { color: '#888', fontSize: 15 },
+  vacioTxt: { color: colors.text.tertiary, fontSize: fontSize.md },
 });

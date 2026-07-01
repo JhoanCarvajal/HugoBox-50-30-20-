@@ -9,6 +9,7 @@ import { txFormSchema } from '../../src/features/transacciones/txSchema';
 import { obtenerTransaccion } from '../../src/features/transacciones/transaccionesService';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { aCentavos, aUnidades, parsearMonto } from '../../src/utils/dinero';
+import { colors, spacing, radius, fontSize, fontWeight } from '../../src/theme';
 
 export default function NuevaTx() {
   const { cajas } = useCajas();
@@ -124,30 +125,30 @@ export default function NuevaTx() {
   );
 }
 const s = StyleSheet.create({
-  c: { padding: 16, gap: 12 },
-  tabs: { flexDirection: 'row', gap: 8 },
+  c: { padding: spacing.lg, gap: spacing.md },
+  tabs: { flexDirection: 'row', gap: spacing.sm },
   tab: {
-    flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#eee', alignItems: 'center',
+    flex: 1, padding: spacing.md, borderRadius: radius.sm, backgroundColor: colors.divider, alignItems: 'center',
   },
-  tabOn: { backgroundColor: '#1a73e8' },
+  tabOn: { backgroundColor: colors.primary },
   tabDisabled: { opacity: 0.5 },
-  tabTxt: { color: '#333', textTransform: 'capitalize' },
-  tabTxtOn: { color: 'white', textTransform: 'capitalize' },
+  tabTxt: { color: colors.text.primary, textTransform: 'capitalize' },
+  tabTxtOn: { color: colors.white, textTransform: 'capitalize' },
   input: {
-    borderWidth: 1, borderColor: '#ccc', borderRadius: 8, padding: 12,
+    borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md,
   },
   cajas: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+    flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
   },
   chip: {
-    paddingVertical: 8, paddingHorizontal: 14, borderRadius: 16, backgroundColor: '#eee',
+    paddingVertical: spacing.sm, paddingHorizontal: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.divider,
   },
-  chipOn: { backgroundColor: '#1a73e8' },
-  chipTxtOn: { color: 'white' },
-  hint: { fontSize: 12, color: '#888', marginTop: -8 },
-  err: { color: '#d32f2f' },
+  chipOn: { backgroundColor: colors.primary },
+  chipTxtOn: { color: colors.white },
+  hint: { fontSize: fontSize.xs, color: colors.text.tertiary, marginTop: -8 },
+  err: { color: colors.error },
   btn: {
-    backgroundColor: '#1a73e8', padding: 14, borderRadius: 10, alignItems: 'center',
+    backgroundColor: colors.primary, padding: spacing.lg, borderRadius: radius.sm, alignItems: 'center',
   },
-  btnTxt: { color: 'white', fontWeight: '700' },
+  btnTxt: { color: colors.white, fontWeight: fontWeight.bold },
 });

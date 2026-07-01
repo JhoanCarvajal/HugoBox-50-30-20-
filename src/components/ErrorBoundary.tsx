@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
+import { colors, spacing, radius, fontSize, fontWeight } from '../theme';
 
 export class ErrorBoundary extends React.Component<
   { children: React.ReactNode }, { error: Error | null }
@@ -22,8 +23,8 @@ export class ErrorBoundary extends React.Component<
   }
 }
 const s = StyleSheet.create({
-  c: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 8 },
-  t: { fontSize: 20, fontWeight: '700' }, m: { color: '#666', textAlign: 'center' },
-  b: { marginTop: 12, backgroundColor: '#1a73e8', padding: 12, borderRadius: 10 },
-  bt: { color: 'white', fontWeight: '600' },
+  c: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: spacing.xxl, gap: spacing.sm },
+  t: { fontSize: fontSize.lg, fontWeight: fontWeight.bold }, m: { color: colors.text.secondary, textAlign: 'center' },
+  b: { marginTop: spacing.md, backgroundColor: colors.primary, padding: spacing.md, borderRadius: radius.sm },
+  bt: { color: colors.white, fontWeight: fontWeight.semibold },
 });

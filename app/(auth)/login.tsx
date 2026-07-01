@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { View, Text, Pressable, StyleSheet, Alert } from 'react-native';
 import { entrarConGoogle } from '../../src/features/auth/authService';
+import { colors, spacing, radius, fontSize, fontWeight } from '../../src/theme';
 
 export default function Login() {
   const [cargando, setCargando] = useState(false);
@@ -20,9 +21,9 @@ export default function Login() {
   );
 }
 const s = StyleSheet.create({
-  c: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 8, padding: 24 },
-  titulo: { fontSize: 32, fontWeight: '700' },
-  sub: { fontSize: 16, color: '#666', marginBottom: 24 },
-  btn: { backgroundColor: '#1a73e8', paddingVertical: 14, paddingHorizontal: 28, borderRadius: 10 },
-  btnTxt: { color: 'white', fontWeight: '600', fontSize: 16 },
+  c: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, padding: spacing.xxl },
+  titulo: { fontSize: fontSize.xxl, fontWeight: fontWeight.bold },
+  sub: { fontSize: fontSize.md, color: colors.text.secondary, marginBottom: spacing.xxl },
+  btn: { backgroundColor: colors.primary, paddingVertical: spacing.lg, paddingHorizontal: spacing.xxxl, borderRadius: radius.sm },
+  btnTxt: { color: colors.white, fontWeight: fontWeight.semibold, fontSize: fontSize.md },
 });

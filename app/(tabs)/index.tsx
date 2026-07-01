@@ -6,6 +6,7 @@ import { useCajas } from '../../src/features/cajas/useCajas';
 import { CajaCard } from '../../src/components/CajaCard';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { cerrarSesion } from '../../src/features/auth/authService';
+import { colors, spacing, radius, fontSize, fontWeight } from '../../src/theme';
 
 export default function Cajas() {
   const { cajas, cargando } = useCajas();
@@ -48,14 +49,14 @@ export default function Cajas() {
       </Pressable>
       {cargando ? (
         <View style={s.centro} testID="dashboard-cargando">
-          <ActivityIndicator size="large" color="#1a73e8" />
+          <ActivityIndicator size="large" color={colors.primary} />
         </View>
       ) : (
         <FlatList
           data={cajas}
           keyExtractor={(c) => c.id}
           renderItem={({ item }) => <CajaCard caja={item} />}
-          contentContainerStyle={{ padding: 16 }}
+          contentContainerStyle={{ padding: spacing.lg }}
           ListEmptyComponent={
             <View style={s.centro}>
               <Text style={s.vacioTxt}>Aún no tienes cajas</Text>
@@ -70,17 +71,17 @@ export default function Cajas() {
   );
 }
 const s = StyleSheet.create({
-  c: { flex: 1, backgroundColor: '#f4f5f7' },
+  c: { flex: 1, backgroundColor: colors.background },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 16, paddingTop: 16,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.lg,
   },
-  saludo: { flexShrink: 1, fontSize: 15, fontWeight: '600', color: '#333' },
-  logout: { paddingVertical: 6, paddingHorizontal: 10 },
-  logoutTxt: { color: '#d32f2f', fontWeight: '600', fontSize: 13 },
-  gestion: { padding: 16 },
-  gestionTxt: { color: '#1a73e8', fontWeight: '600' },
+  saludo: { flexShrink: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text.primary },
+  logout: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  logoutTxt: { color: colors.error, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
+  gestion: { padding: spacing.lg },
+  gestionTxt: { color: colors.primary, fontWeight: fontWeight.semibold },
   centro: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  vacioTxt: { color: '#888', fontSize: 15 },
-  fab: { position: 'absolute', bottom: 24, right: 24, backgroundColor: '#1a73e8', borderRadius: 28, paddingVertical: 14, paddingHorizontal: 20 },
-  fabTxt: { color: 'white', fontWeight: '700' },
+  vacioTxt: { color: colors.text.tertiary, fontSize: fontSize.md },
+  fab: { position: 'absolute', bottom: spacing.xxl, right: spacing.xxl, backgroundColor: colors.primary, borderRadius: radius.pill, paddingVertical: spacing.lg, paddingHorizontal: spacing.xl },
+  fabTxt: { color: colors.white, fontWeight: fontWeight.bold },
 });
