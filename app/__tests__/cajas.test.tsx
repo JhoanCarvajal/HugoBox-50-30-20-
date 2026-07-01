@@ -1,7 +1,7 @@
 import { Alert } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
 import { useRouter } from 'expo-router';
-import GestionCajas from '../cajas';
+import GestionCajas from '../(tabs)/cajas';
 import { useCajas } from '../../src/features/cajas/useCajas';
 import { crearCaja, actualizarPorcentajes } from '../../src/features/cajas/cajasService';
 import { useSessionStore } from '../../src/stores/sessionStore';
@@ -66,7 +66,7 @@ describe('Gestión de cajas', () => {
     await user.clear(screen.getByTestId('pct-c2'));
     await user.type(screen.getByTestId('pct-c2'), '30');
 
-    await user.press(screen.getByText('Guardar %'));
+    await user.press(screen.getByText('Guardar distribución'));
 
     expect(actualizarPorcentajes).toHaveBeenCalledWith('u1', [
       { id: 'c1', porcentaje: 40 },
@@ -85,7 +85,7 @@ describe('Gestión de cajas', () => {
     await user.clear(screen.getByTestId('pct-c1'));
     await user.type(screen.getByTestId('pct-c1'), '40');
 
-    await user.press(screen.getByText('Guardar %'));
+    await user.press(screen.getByText('Guardar distribución'));
 
     expect(actualizarPorcentajes).toHaveBeenCalledWith('u1', [
       { id: 'c1', porcentaje: 40 },

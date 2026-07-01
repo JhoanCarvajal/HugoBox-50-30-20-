@@ -17,7 +17,7 @@ describe('CajaCard', () => {
     const { getByText } = await render(<CajaCard caja={cajaBase} />);
 
     expect(getByText('Gastos')).toBeTruthy();
-    expect(getByText('50%')).toBeTruthy();
+    expect(getByText('50% de tus ingresos')).toBeTruthy();
 
     // No asveramos el string de moneda carácter por carácter: formatearMoneda usa
     // Intl.NumberFormat('es-CO', { currency: 'COP' }), cuyo formato exacto (símbolo,

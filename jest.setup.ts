@@ -17,6 +17,14 @@ jest.mock('@react-native-async-storage/async-storage', () =>
   // eslint-disable-next-line global-require
   require('@react-native-async-storage/async-storage/jest/async-storage-mock'));
 
+// react-native-safe-area-context necesita un SafeAreaProvider en runtime. En tests
+// que renderizan pantallas aisladas no hay provider, así que se usa el mock oficial
+// (insets en 0, SafeAreaView como View).
+jest.mock('react-native-safe-area-context', () =>
+  // El mock oficial expone todo bajo `default`; lo devolvemos como el módulo.
+  // eslint-disable-next-line global-require
+  require('react-native-safe-area-context/jest/mock').default);
+
 // El `setupFiles` de jest-expo (corre antes que este `setupFilesAfterEnv`) instala el
 // polyfill "Winter" de Expo, que reemplaza `global.fetch` por un stub respaldado por un
 // NativeModule inexistente bajo Jest (sus métodos como `text()` no hacen nada). El SDK de

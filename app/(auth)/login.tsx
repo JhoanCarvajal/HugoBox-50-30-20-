@@ -1,34 +1,50 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, Alert } from 'react-native';
+import { View, Text, StyleSheet, Pressable, ActivityIndicator, Alert } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { entrarConGoogle } from '../../src/features/auth/authService';
-import { Button } from '../../src/components/ui/Button';
+import { Avatar } from '../../src/components/ui/Avatar';
 import { colors, spacing, radius, fontSize, fontWeight } from '../../src/theme';
 
 export default function Login() {
   const [cargando, setCargando] = useState(false);
+
   const onPress = async () => {
-    try { setCargando(true); await entrarConGoogle(); }
-    catch (e) { Alert.alert('No se pudo iniciar sesión', String(e)); }
-    finally { setCargando(false); }
+    setCargando(true);
+    try {
+      await entrarConGoogle();
+    } catch {
+      Alert.alert('No pudimos iniciar sesión', 'Inténtalo de nuevo en un momento.');
+    } finally {
+      setCargando(false);
+    }
   };
+
   return (
     <View style={s.c}>
-      <View style={s.logo}>
-        <Text style={s.logoTxt}>H</Text>
-      </View>
+      <Avatar label="H" filled shape="rounded" size={72} style={s.logo} />
       <Text style={s.titulo}>HugoBox</Text>
       <Text style={s.sub}>Organiza tu dinero en cajas</Text>
-      <Button
-        label="Iniciar sesión con Google"
+
+      <Pressable
+        style={s.google}
         onPress={onPress}
-        loading={cargando}
-        block
-        leftIcon={(
-          <View style={s.g}>
-            <Text style={s.gTxt}>G</Text>
-          </View>
+        disabled={cargando}
+        accessibilityRole="button"
+        accessibilityLabel="Continuar con Google"
+      >
+        {cargando ? (
+          <ActivityIndicator color={colors.primary} />
+        ) : (
+          <>
+            <Ionicons name="logo-google" size={20} color="#4285F4" />
+            <Text style={s.googleTxt}>Continuar con Google</Text>
+          </>
         )}
-      />
+      </Pressable>
+
+      <Text style={s.disclaimer}>
+        Al continuar aceptas los Términos y la Política de privacidad.
+      </Text>
     </View>
   );
 }
@@ -41,25 +57,41 @@ const s = StyleSheet.create({
     padding: spacing.xxxl,
     backgroundColor: colors.background,
   },
-  logo: {
-    width: 88,
-    height: 88,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
+  logo: { marginBottom: spacing.xl },
+  titulo: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.text.primary,
+    marginBottom: spacing.xs,
+  },
+  sub: {
+    fontSize: fontSize.md,
+    color: colors.text.tertiary,
+    marginBottom: spacing.xxxl,
+  },
+  google: {
+    flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: spacing.xxl,
+    gap: spacing.sm,
+    alignSelf: 'stretch',
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radius.sm,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.xxxl,
+    minHeight: 56,
   },
-  logoTxt: { color: colors.white, fontSize: 44, fontWeight: fontWeight.bold },
-  titulo: { fontSize: fontSize.xl, fontWeight: fontWeight.bold, color: colors.text.primary, marginBottom: spacing.sm },
-  sub: { fontSize: fontSize.md, color: colors.text.tertiary, marginBottom: spacing.xxxl },
-  g: {
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: colors.white,
-    alignItems: 'center',
-    justifyContent: 'center',
+  googleTxt: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.semibold,
+    color: colors.text.primary,
   },
-  gTxt: { color: colors.primary, fontSize: fontSize.sm, fontWeight: fontWeight.bold },
+  disclaimer: {
+    fontSize: fontSize.xs,
+    color: colors.text.quaternary,
+    textAlign: 'center',
+    marginTop: spacing.lg,
+  },
 });

@@ -23,7 +23,7 @@ describe('Login', () => {
     // así que no hace falta un `waitFor` aparte ni aparecen warnings de React
     // por `setState` fuera de `act()`.
     const user = userEvent.setup();
-    await user.press(screen.getByText('Iniciar sesión con Google'));
+    await user.press(screen.getByText('Continuar con Google'));
 
     expect(entrarConGoogle).toHaveBeenCalledTimes(1);
   });

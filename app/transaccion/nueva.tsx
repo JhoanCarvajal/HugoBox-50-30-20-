@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, ScrollView, Alert,
+  View, Text, StyleSheet, ScrollView, Alert, Pressable,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCajas } from '../../src/features/cajas/useCajas';
 import { useTransacciones } from '../../src/features/transacciones/useTransacciones';
@@ -110,8 +112,19 @@ export default function NuevaTx() {
     : (esIngreso ? 'Registrar ingreso' : 'Registrar egreso');
 
   return (
-    <ScrollView contentContainerStyle={s.c}>
-      <Text style={s.title}>Nueva transacción</Text>
+    <SafeAreaView style={s.safe} edges={['top']}>
+      <View style={s.header}>
+        <Pressable
+          onPress={() => router.back()}
+          style={s.back}
+          accessibilityRole="button"
+          accessibilityLabel="Volver"
+        >
+          <Ionicons name="chevron-back" size={22} color={colors.text.primary} />
+        </Pressable>
+        <Text style={s.title}>Nueva transacción</Text>
+      </View>
+      <ScrollView contentContainerStyle={s.c}>
 
       <SegmentedControl<'ingreso' | 'egreso'>
         options={[
@@ -164,11 +177,21 @@ export default function NuevaTx() {
         label={botonLabel}
         onPress={guardar}
       />
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.sm,
+  },
+  back: { padding: spacing.xs },
   c: { padding: spacing.lg, gap: spacing.md },
   title: {
     fontSize: fontSize.lg,

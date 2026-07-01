@@ -1,110 +1,163 @@
-import {
-  View, FlatList, Pressable, Text, StyleSheet, ActivityIndicator, Alert,
-} from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Pressable, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useCajas } from '../../src/features/cajas/useCajas';
-import { CajaCard } from '../../src/components/CajaCard';
+import { useHistorial } from '../../src/features/transacciones/useHistorial';
 import { useSessionStore } from '../../src/stores/sessionStore';
-import { cerrarSesion } from '../../src/features/auth/authService';
-import { colors, spacing, radius, fontSize, fontWeight } from '../../src/theme';
+import { CajaCard } from '../../src/components/CajaCard';
+import { Avatar } from '../../src/components/ui/Avatar';
+import { formatearMoneda } from '../../src/utils/dinero';
+import { inicial } from '../../src/utils/colorCaja';
+import { colors, spacing, radius, fontSize, fontWeight, shadows } from '../../src/theme';
+
+/** Fecha larga capitalizada, p.ej. "Miércoles, 1 de julio". */
+function fechaLarga(): string {
+  try {
+    const s = new Intl.DateTimeFormat('es-CO', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+    }).format(new Date());
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  } catch {
+    return '';
+  }
+}
 
 export default function Cajas() {
-  const { cajas, cargando } = useCajas();
   const router = useRouter();
+  const { cajas, cargando } = useCajas();
+  const { items } = useHistorial();
   const usuario = useSessionStore((st) => st.usuario);
+
   const nombreMostrado = usuario?.displayName || usuario?.email || '';
 
-  const onCerrarSesion = () => {
-    // Confirmación previa: cerrar sesión desloguea de Google también
-    // (ver `cerrarSesion` en authService), así que un toque accidental
-    // no debería sacar al usuario sin avisar.
-    Alert.alert('Cerrar sesión', '¿Seguro que quieres cerrar sesión?', [
-      { text: 'Cancelar' },
-      {
-        text: 'Salir',
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await cerrarSesion();
-            // No se navega manualmente: el guard de `app/_layout.tsx`
-            // redirige a `/(auth)/login` en cuanto `usuario` pasa a null.
-          } catch (err) {
-            Alert.alert('No se pudo cerrar sesión', err instanceof Error ? err.message : String(err));
-          }
-        },
-      },
-    ]);
-  };
+  const balanceTotal = cajas.reduce((acc, c) => acc + c.saldo, 0);
+  const ingresos = items
+    .filter((t) => t.tipo === 'ingreso')
+    .reduce((acc, t) => acc + t.monto, 0);
+  const egresos = items
+    .filter((t) => t.tipo === 'egreso')
+    .reduce((acc, t) => acc + t.monto, 0);
 
   return (
-    <SafeAreaView style={s.c} edges={['top']}>
-      <View style={s.header}>
-        <Text style={s.saludo} numberOfLines={1}>Hola, {nombreMostrado}</Text>
-        <Pressable style={s.logout} onPress={onCerrarSesion}>
-          <Text style={s.logoutTxt}>Salir</Text>
-        </Pressable>
-      </View>
-      <Pressable style={s.gestion} onPress={() => router.push('/cajas')}>
-        <Text style={s.gestionTxt}>Gestionar cajas</Text>
-      </Pressable>
-      {cargando ? (
-        <View style={s.centro}>
-          <ActivityIndicator testID="dashboard-cargando" size="large" color={colors.primary} />
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <ScrollView contentContainerStyle={styles.c}>
+        {/* Header */}
+        <View style={styles.header}>
+          <View style={styles.headerTxt}>
+            <Text style={styles.fecha}>{fechaLarga()}</Text>
+            <Text style={styles.saludo} numberOfLines={1}>
+              Hola, {nombreMostrado}
+            </Text>
+          </View>
+          <Pressable
+            onPress={() => router.push('/perfil')}
+            accessibilityRole="button"
+            accessibilityLabel="Ir a perfil"
+          >
+            <Avatar label={inicial(nombreMostrado || 'U')} filled shape="circle" size={44} />
+          </Pressable>
         </View>
-      ) : (
-        <FlatList
-          data={cajas}
-          keyExtractor={(c) => c.id}
-          renderItem={({ item }) => <CajaCard caja={item} />}
-          contentContainerStyle={{ padding: spacing.lg }}
-          ListEmptyComponent={(
-            <View style={s.centro}>
-              <Text style={s.vacioTxt}>Aún no tienes cajas</Text>
+
+        {/* Balance total */}
+        <View style={styles.balanceCard}>
+          <Text style={styles.balanceLabel}>Balance total</Text>
+          <Text style={styles.balanceMonto}>{formatearMoneda(balanceTotal)}</Text>
+          <View style={styles.pills}>
+            <View style={[styles.pill, styles.pillIn]}>
+              <Text style={styles.pillLabelIn}>Ingresos</Text>
+              <Text style={styles.pillMontoIn}>+{formatearMoneda(ingresos)}</Text>
             </View>
-          )}
-        />
-      )}
-      <Pressable
-        testID="dashboard-fab"
-        style={s.fab}
-        onPress={() => router.push('/transaccion/nueva')}
-        accessibilityRole="button"
-        accessibilityLabel="Nuevo movimiento"
-      >
-        <Text style={s.fabTxt}>+</Text>
-      </Pressable>
+            <View style={[styles.pill, styles.pillOut]}>
+              <Text style={styles.pillLabelOut}>Egresos</Text>
+              <Text style={styles.pillMontoOut}>-{formatearMoneda(egresos)}</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Tus cajas */}
+        <View style={styles.seccionHead}>
+          <Text style={styles.seccionTitulo}>Tus cajas</Text>
+          <Pressable onPress={() => router.push('/cajas')}>
+            <Text style={styles.editar}>Editar</Text>
+          </Pressable>
+        </View>
+
+        {cargando ? (
+          <ActivityIndicator testID="dashboard-cargando" color={colors.primary} style={styles.loader} />
+        ) : cajas.length === 0 ? (
+          <Text style={styles.vacio}>Aún no tienes cajas</Text>
+        ) : (
+          <View style={styles.lista}>
+            {cajas.map((caja, i) => (
+              <CajaCard key={caja.id} caja={caja} index={i} />
+            ))}
+          </View>
+        )}
+      </ScrollView>
     </SafeAreaView>
   );
 }
 
-const s = StyleSheet.create({
-  c: { flex: 1, backgroundColor: colors.background },
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: colors.background },
+  c: { padding: spacing.lg, gap: spacing.lg },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.lg,
-  },
-  saludo: { flexShrink: 1, fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.text.primary },
-  logout: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
-  logoutTxt: { color: colors.primary, fontWeight: fontWeight.semibold, fontSize: fontSize.sm },
-  gestion: { paddingHorizontal: spacing.lg, paddingVertical: spacing.sm },
-  gestionTxt: { color: colors.primary, fontWeight: fontWeight.semibold },
-  centro: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xxl },
-  vacioTxt: { color: colors.text.tertiary, fontSize: fontSize.md },
-  fab: {
-    position: 'absolute',
-    bottom: spacing.xxl,
-    right: spacing.xl,
-    width: 56,
-    height: 56,
-    borderRadius: radius.pill,
-    backgroundColor: colors.primary,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.primary,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.45,
-    shadowRadius: 12,
-    elevation: 6,
+    justifyContent: 'space-between',
   },
-  fabTxt: { color: colors.white, fontSize: 30, fontWeight: fontWeight.bold, lineHeight: 34 },
+  headerTxt: { flexShrink: 1 },
+  fecha: { fontSize: fontSize.sm, color: colors.text.tertiary },
+  saludo: {
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    color: colors.text.primary,
+  },
+  balanceCard: {
+    backgroundColor: colors.surface,
+    borderRadius: radius.lg,
+    padding: spacing.lg,
+    ...shadows.card,
+  },
+  balanceLabel: { fontSize: fontSize.sm, color: colors.text.secondary },
+  balanceMonto: {
+    fontSize: fontSize.xxl,
+    fontWeight: fontWeight.bold,
+    color: colors.text.primary,
+    marginTop: spacing.xs,
+    marginBottom: spacing.md,
+  },
+  pills: { flexDirection: 'row', gap: spacing.md },
+  pill: {
+    flex: 1,
+    borderRadius: radius.md,
+    padding: spacing.md,
+  },
+  pillIn: { backgroundColor: '#e6f4ea' },
+  pillOut: { backgroundColor: '#fdecea' },
+  pillLabelIn: { fontSize: fontSize.xs, color: colors.success, fontWeight: fontWeight.semibold },
+  pillMontoIn: { fontSize: fontSize.md, color: colors.success, fontWeight: fontWeight.bold, marginTop: 2 },
+  pillLabelOut: { fontSize: fontSize.xs, color: colors.error, fontWeight: fontWeight.semibold },
+  pillMontoOut: { fontSize: fontSize.md, color: colors.error, fontWeight: fontWeight.bold, marginTop: 2 },
+  seccionHead: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  seccionTitulo: {
+    fontSize: fontSize.md,
+    fontWeight: fontWeight.bold,
+    color: colors.text.primary,
+  },
+  editar: { fontSize: fontSize.sm, color: colors.primary, fontWeight: fontWeight.semibold },
+  lista: { gap: spacing.md },
+  loader: { marginTop: spacing.xl },
+  vacio: {
+    color: colors.text.tertiary,
+    fontSize: fontSize.md,
+    textAlign: 'center',
+    marginTop: spacing.xl,
+  },
 });
