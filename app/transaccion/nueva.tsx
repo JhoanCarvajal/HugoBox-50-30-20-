@@ -1,22 +1,48 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCajas } from '../../src/features/cajas/useCajas';
 import { useTransacciones } from '../../src/features/transacciones/useTransacciones';
 import { txFormSchema } from '../../src/features/transacciones/txSchema';
-import { aCentavos, parsearMonto } from '../../src/utils/dinero';
+import { obtenerTransaccion } from '../../src/features/transacciones/transaccionesService';
+import { useSessionStore } from '../../src/stores/sessionStore';
+import { aCentavos, aUnidades, parsearMonto } from '../../src/utils/dinero';
 
 export default function NuevaTx() {
   const { cajas } = useCajas();
-  const { crearIngreso, crearEgreso } = useTransacciones();
+  const { crearIngreso, crearEgreso, editar } = useTransacciones();
   const router = useRouter();
+  const uid = useSessionStore((s) => s.usuario?.uid);
+  const { editId: editIdParam } = useLocalSearchParams<{ editId?: string }>();
+  // Expo Router puede entregar un array si el param se repite en la URL;
+  // en la práctica siempre navegamos con un único valor.
+  const editId = Array.isArray(editIdParam) ? editIdParam[0] : editIdParam;
+  const esEdicion = !!editId;
+
   const [tipo, setTipo] = useState<'ingreso' | 'egreso'>('ingreso');
   const [monto, setMonto] = useState('');
   const [descripcion, setDescripcion] = useState('');
   const [cajaId, setCajaId] = useState<string | null>(null);
   const [error, setError] = useState('');
+
+  // Modo edición: precarga la transacción existente y rellena el formulario.
+  // En modo alta (sin editId) este efecto no hace nada, así que el
+  // comportamiento actual del formulario no cambia.
+  useEffect(() => {
+    if (!editId || !uid) return;
+    let cancelado = false;
+    (async () => {
+      const tx = await obtenerTransaccion(uid, editId);
+      if (cancelado || !tx) return;
+      setTipo(tx.tipo);
+      setMonto(String(aUnidades(tx.monto)));
+      setDescripcion(tx.descripcion);
+      setCajaId(tx.cajaId);
+    })();
+    return () => { cancelado = true; };
+  }, [editId, uid]);
 
   const guardar = async () => {
     // En es-CO el separador decimal habitual es la coma ("100,50") y el de
@@ -34,8 +60,13 @@ export default function NuevaTx() {
     // El input está en unidades; los servicios trabajan en centavos enteros.
     const centavos = aCentavos(montoNumero);
     try {
-      if (tipo === 'ingreso') await crearIngreso(centavos, descripcion);
-      else await crearEgreso(centavos, cajaId!, descripcion);
+      if (esEdicion) {
+        await editar(editId!, { monto: centavos, descripcion, cajaId: cajaId ?? undefined });
+      } else if (tipo === 'ingreso') {
+        await crearIngreso(centavos, descripcion);
+      } else {
+        await crearEgreso(centavos, cajaId!, descripcion);
+      }
       router.back();
     } catch (err) {
       // Si el servicio falla (red/Firestore caído), se informa al usuario y
@@ -49,7 +80,12 @@ export default function NuevaTx() {
     <ScrollView contentContainerStyle={s.c}>
       <View style={s.tabs}>
         {(['ingreso', 'egreso'] as const).map((t) => (
-          <Pressable key={t} onPress={() => setTipo(t)} style={[s.tab, tipo === t && s.tabOn]}>
+          <Pressable
+            key={t}
+            disabled={esEdicion}
+            onPress={() => setTipo(t)}
+            style={[s.tab, tipo === t && s.tabOn, esEdicion && s.tabDisabled]}
+          >
             <Text style={tipo === t ? s.tabTxtOn : s.tabTxt}>{t}</Text>
           </Pressable>
         ))}
@@ -67,7 +103,9 @@ export default function NuevaTx() {
         </View>
       )}
       {!!error && <Text style={s.err}>{error}</Text>}
-      <Pressable style={s.btn} onPress={guardar}><Text style={s.btnTxt}>Guardar</Text></Pressable>
+      <Pressable style={s.btn} onPress={guardar}>
+        <Text style={s.btnTxt}>{esEdicion ? 'Guardar cambios' : 'Guardar'}</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -78,6 +116,7 @@ const s = StyleSheet.create({
     flex: 1, padding: 12, borderRadius: 8, backgroundColor: '#eee', alignItems: 'center',
   },
   tabOn: { backgroundColor: '#1a73e8' },
+  tabDisabled: { opacity: 0.5 },
   tabTxt: { color: '#333', textTransform: 'capitalize' },
   tabTxtOn: { color: 'white', textTransform: 'capitalize' },
   input: {

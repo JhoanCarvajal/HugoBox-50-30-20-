@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { View, FlatList, Text, Pressable, StyleSheet, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { useHistorial } from '../../src/features/transacciones/useHistorial';
 import { useCajas } from '../../src/features/cajas/useCajas';
 import { filtrarHistorial, rangoFecha, ClaveRangoFecha } from '../../src/features/transacciones/filtros';
@@ -21,6 +22,9 @@ export default function Historial() {
   const { items } = useHistorial();
   const { cajas } = useCajas();
   const uid = useSessionStore((s) => s.usuario?.uid);
+  const router = useRouter();
+
+  const onEditar = (id: string) => router.push(`/transaccion/nueva?editId=${id}`);
 
   const itemsFiltrados = useMemo(() => {
     const { desde, hasta } = rangoFecha(filtroFecha, Date.now());
@@ -74,7 +78,7 @@ export default function Historial() {
         data={itemsFiltrados}
         keyExtractor={(t) => t.id}
         renderItem={({ item }) => (
-          <Pressable onLongPress={() => onBorrar(item.id)} style={s.row}>
+          <Pressable onPress={() => onEditar(item.id)} onLongPress={() => onBorrar(item.id)} style={s.row}>
             <View style={s.info}>
               <Text style={s.desc}>{item.descripcion || item.tipo}</Text>
               <Text style={s.fecha}>{formatearFecha(item.fecha)}</Text>

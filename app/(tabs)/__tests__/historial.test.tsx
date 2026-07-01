@@ -1,11 +1,18 @@
 import { Alert } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
+import { useRouter } from 'expo-router';
 import Historial from '../historial';
 import { useHistorial } from '../../../src/features/transacciones/useHistorial';
 import { useCajas } from '../../../src/features/cajas/useCajas';
 import { borrarTransaccion } from '../../../src/features/transacciones/transaccionesService';
 import { useSessionStore } from '../../../src/stores/sessionStore';
 import { formatearFecha } from '../../../src/utils/fecha';
+
+// Se mockea `expo-router` para poder espiar `router.push` (navegación a
+// editar) sin depender de un Stack real montado en el test.
+jest.mock('expo-router', () => ({
+  useRouter: jest.fn(),
+}));
 
 // Se mockea `useHistorial` (capa de datos en tiempo real de Firestore) para no
 // depender del emulador: solo se necesita una lista fija de transacciones
@@ -42,8 +49,11 @@ const itemsMock = [
 ];
 
 describe('Historial', () => {
+  const push = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (useRouter as jest.Mock).mockReturnValue({ push });
     (useHistorial as jest.Mock).mockReturnValue({ items: itemsMock, cargando: false });
     (useCajas as jest.Mock).mockReturnValue({ cajas: [] });
     useSessionStore.setState({
@@ -53,6 +63,15 @@ describe('Historial', () => {
       cargando: false,
     });
     jest.spyOn(Alert, 'alert');
+  });
+
+  it('tocar una fila (tap corto) navega a editar ese movimiento', async () => {
+    await render(<Historial />);
+    const user = userEvent.setup();
+
+    await user.press(screen.getByText('Mercado'));
+
+    expect(push).toHaveBeenCalledWith('/transaccion/nueva?editId=tx1');
   });
 
   it('mantener pulsado una fila muestra la confirmación de borrado', async () => {

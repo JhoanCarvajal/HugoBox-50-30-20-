@@ -1,6 +1,6 @@
 import { Alert } from 'react-native';
 import { useSessionStore } from '../../stores/sessionStore';
-import { agregarIngreso, agregarEgreso } from './transaccionesService';
+import { agregarIngreso, agregarEgreso, editarTransaccion } from './transaccionesService';
 
 export function useTransacciones() {
   const uid = useSessionStore((s) => s.usuario?.uid);
@@ -15,5 +15,17 @@ export function useTransacciones() {
       Alert.alert('Saldo insuficiente', 'Registramos el egreso, pero esta caja quedó en negativo.');
     }
   }
-  return { crearIngreso, crearEgreso };
+  async function editar(
+    txId: string,
+    datos: { monto: number; descripcion: string; cajaId?: string },
+  ) {
+    if (!uid) return;
+    const { advertenciaSaldo } = await editarTransaccion(uid, txId, datos);
+    if (advertenciaSaldo) {
+      Alert.alert('Saldo insuficiente', 'Registramos el egreso, pero esta caja quedó en negativo.');
+    }
+  }
+  return {
+    crearIngreso, crearEgreso, editar,
+  };
 }
