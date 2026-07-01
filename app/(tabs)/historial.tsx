@@ -86,7 +86,11 @@ export default function Historial() {
         )}
         ListEmptyComponent={
           <View style={s.vacio}>
-            <Text style={s.vacioTxt}>Aún no tienes movimientos</Text>
+            <Text style={s.vacioTxt}>
+              {items.length === 0
+                ? 'Aún no tienes movimientos'
+                : 'No hay movimientos con estos filtros'}
+            </Text>
           </View>
         }
       />

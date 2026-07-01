@@ -143,7 +143,7 @@ describe('Historial', () => {
     },
   );
 
-  it('cuando el filtro no arroja resultados se muestra el estado vacío aunque sí haya movimientos', async () => {
+  it('cuando el filtro no arroja resultados muestra un mensaje distinto al de historial vacío', async () => {
     (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
     (useHistorial as jest.Mock).mockReturnValue({
       items: [
@@ -158,7 +158,10 @@ describe('Historial', () => {
     await render(<Historial />);
     await user.press(screen.getByText('Gastos'));
 
-    expect(screen.getByText('Aún no tienes movimientos')).toBeTruthy();
+    // Sí hay movimientos (Ropa en c2), pero el filtro por Gastos los oculta:
+    // el mensaje debe distinguirse del "historial realmente vacío".
+    expect(screen.getByText('No hay movimientos con estos filtros')).toBeTruthy();
+    expect(screen.queryByText('Aún no tienes movimientos')).toBeNull();
     expect(screen.queryByText('Ropa')).toBeNull();
   });
 });
