@@ -3,6 +3,7 @@ import { Slot, useRouter, useSegments } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { useAuth } from '../src/features/auth/useAuth';
 import { configurarGoogle } from '../src/features/auth/authService';
+import { ErrorBoundary } from '../src/components/ErrorBoundary';
 
 export default function RootLayout() {
   const { usuario, cargando } = useAuth();
@@ -20,5 +21,9 @@ export default function RootLayout() {
   if (cargando) {
     return <View style={{ flex: 1, justifyContent: 'center' }}><ActivityIndicator /></View>;
   }
-  return <Slot />;
+  return (
+    <ErrorBoundary>
+      <Slot />
+    </ErrorBoundary>
+  );
 }

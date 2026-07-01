@@ -15,7 +15,21 @@ export default function Historial() {
   const onBorrar = (id: string) =>
     Alert.alert('Borrar', '¿Eliminar este movimiento? Se revertirán los saldos.', [
       { text: 'Cancelar' },
-      { text: 'Borrar', style: 'destructive', onPress: () => uid && borrarTransaccion(uid, id) },
+      {
+        text: 'Borrar',
+        style: 'destructive',
+        onPress: async () => {
+          if (!uid) return;
+          try {
+            await borrarTransaccion(uid, id);
+          } catch (err) {
+            // Si el borrado falla (red/Firestore caído), se informa al
+            // usuario en vez de dejarlo creyendo que el movimiento se
+            // eliminó y los saldos se revirtieron.
+            Alert.alert('No se pudo borrar', err instanceof Error ? err.message : String(err));
+          }
+        },
+      },
     ]);
 
   return (

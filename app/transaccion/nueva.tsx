@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import {
-  View, Text, TextInput, Pressable, StyleSheet, ScrollView,
+  View, Text, TextInput, Pressable, StyleSheet, ScrollView, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useCajas } from '../../src/features/cajas/useCajas';
@@ -31,9 +31,16 @@ export default function NuevaTx() {
     setError('');
     // El input está en unidades; los servicios trabajan en centavos enteros.
     const centavos = aCentavos(montoNumero);
-    if (tipo === 'ingreso') await crearIngreso(centavos, descripcion);
-    else await crearEgreso(centavos, cajaId!, descripcion);
-    router.back();
+    try {
+      if (tipo === 'ingreso') await crearIngreso(centavos, descripcion);
+      else await crearEgreso(centavos, cajaId!, descripcion);
+      router.back();
+    } catch (err) {
+      // Si el servicio falla (red/Firestore caído), se informa al usuario y
+      // se le deja en el formulario para reintentar en vez de navegar como
+      // si el guardado hubiera funcionado.
+      Alert.alert('No se pudo guardar', err instanceof Error ? err.message : String(err));
+    }
   };
 
   return (
