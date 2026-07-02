@@ -10,13 +10,15 @@ export function aUnidades(centavos: number): number {
   return centavos / 100;
 }
 
-/** Formatea un monto en centavos como moneda. */
-export function formatearMoneda(centavos: number, moneda = 'COP'): string {
-  return new Intl.NumberFormat('es-CO', {
-    style: 'currency',
-    currency: moneda,
-    minimumFractionDigits: 2,
-  }).format(centavos / 100);
+/**
+ * Formatea un monto en centavos como moneda: prefijo `$`, coma para miles y punto para
+ * decimales (siempre 2), consistente con el campo de captura (MoneyInput). Solo COP.
+ */
+export function formatearMoneda(centavos: number): string {
+  const signo = centavos < 0 ? '-' : '';
+  const abs = Math.abs(centavos);
+  const canonico = `${Math.floor(abs / 100)}.${String(abs % 100).padStart(2, '0')}`;
+  return `${signo}$${formatearEntrada(canonico, { blur: true })}`;
 }
 
 /**

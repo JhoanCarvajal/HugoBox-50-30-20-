@@ -18,8 +18,21 @@ describe('aUnidades', () => {
 });
 
 describe('formatearMoneda', () => {
-  it('formatea centavos con símbolo y 2 decimales', () => {
-    expect(formatearMoneda(123450)).toContain('1.234,5');
+  it('usa $, coma para miles y punto para decimales', () => {
+    expect(formatearMoneda(123450)).toBe('$1,234.50');
+  });
+
+  it('rellena a 2 decimales y agrupa miles', () => {
+    expect(formatearMoneda(150000)).toBe('$1,500.00');
+    expect(formatearMoneda(10001)).toBe('$100.01');
+  });
+
+  it('formatea el cero', () => {
+    expect(formatearMoneda(0)).toBe('$0.00');
+  });
+
+  it('los negativos llevan el signo antes del símbolo', () => {
+    expect(formatearMoneda(-150050)).toBe('-$1,500.50');
   });
 });
 

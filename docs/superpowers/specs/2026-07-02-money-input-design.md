@@ -10,7 +10,7 @@ pegado inteligente y cursor estable. Reemplaza al `TextField` genérico en la ca
 - **Formato visual:** coma para miles, punto para decimales → `1,500.50`, con prefijo fijo `$`.
 - **Decimales:** máximo 2. Se muestran **solo si el usuario los teclea** (no hay relleno automático a `.00`).
 - **Formateo:** en vivo mientras se escribe (agrupación de miles + reubicación de cursor).
-- **Alcance:** solo el input adopta este formato (opción A). El resto de la app (`formatearMoneda`, es-CO) no cambia.
+- **Alcance:** todo el formateo de moneda de la app usa este formato (opción B): tanto el `MoneyInput` como `formatearMoneda` (historial, saldos, dashboard).
 - **Sin** migración a react-hook-form: se mantiene el patrón `useState` + `safeParse`.
 
 ## Modelo de datos
@@ -55,6 +55,11 @@ No depende del `selection` nativo (que llega desfasado en `onChangeText`).
 
 `parsearMonto` se conserva sin cambios para el submit.
 
+### `formatearMoneda(centavos): string`
+Formatea montos guardados para mostrarlos en toda la app (historial, saldos, dashboard):
+`$1,234.50`, siempre con 2 decimales y signo antes del `$` en negativos. Es JS puro (reusa
+`formatearEntrada`, sin `Intl`/locale), así que su salida es idéntica en jest y en dispositivo.
+
 ## Componente — `src/components/ui/MoneyInput.tsx`
 Controlado, sobre `TextInput`, reusando los estilos de `TextField`.
 ```ts
@@ -97,6 +102,5 @@ Se reemplazó el `<TextField label="Monto" large .../>` + hint por
 - ⚠️ El comportamiento del `selection` nativo no se puede validar en jsdom; se verificó en dispositivo.
 
 ## Fuera de alcance
-- Cambiar `formatearMoneda` / consistencia global (opción B).
-- Múltiples monedas / decimales configurables.
+- Múltiples monedas / decimales configurables (hoy solo COP / `$`).
 - Validación de rango máximo (`.max`).
