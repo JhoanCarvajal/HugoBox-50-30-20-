@@ -37,6 +37,9 @@ export default function NuevaTx() {
   // Campo al que pertenece el error de zod (issues[0].path); permite mostrarlo
   // en la prop `error` del TextField correspondiente en vez de un texto suelto.
   const [errorField, setErrorField] = useState('');
+  // Bloquea el botón mientras se guarda: evita envíos duplicados y alimenta el
+  // indicador de carga.
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Modo edición: precarga la transacción existente y rellena el formulario.
   // En modo alta (sin editId) este efecto no hace nada, así que el
@@ -70,6 +73,9 @@ export default function NuevaTx() {
   }, [editId, uid]);
 
   const guardar = async () => {
+    // Bloqueo de reentrada: aunque el botón ya se deshabilita con isSubmitting,
+    // esto descarta cualquier segundo onPress que llegara antes del re-render.
+    if (isSubmitting) return;
     // En es-CO el separador decimal habitual es la coma ("100,50") y el de
     // miles puede ser punto o coma ("1.000" / "1,000"). `parsearMonto`
     // detecta cuál separador es el decimal (el último, si le siguen 1 o 2
@@ -90,6 +96,7 @@ export default function NuevaTx() {
     setErrorField('');
     // El input está en unidades; los servicios trabajan en centavos enteros.
     const centavos = aCentavos(montoNumero);
+    setIsSubmitting(true);
     try {
       if (esEdicion) {
         await editar(editId!, { monto: centavos, descripcion, cajaId: cajaId ?? undefined });
@@ -98,12 +105,16 @@ export default function NuevaTx() {
       } else {
         await crearEgreso(centavos, cajaId!, descripcion);
       }
+      // Solo se navega tras un guardado exitoso.
       router.back();
     } catch (err) {
       // Si el servicio falla (red/Firestore caído), se informa al usuario y
       // se le deja en el formulario para reintentar en vez de navegar como
       // si el guardado hubiera funcionado.
       Alert.alert('No se pudo guardar', err instanceof Error ? err.message : String(err));
+    } finally {
+      // Rehabilita el botón pase lo que pase, para poder reintentar tras un error.
+      setIsSubmitting(false);
     }
   };
 
@@ -125,7 +136,7 @@ export default function NuevaTx() {
         </Pressable>
         <Text style={s.title}>Nueva transacción</Text>
       </View>
-      <ScrollView contentContainerStyle={s.c}>
+      <ScrollView contentContainerStyle={s.c} keyboardShouldPersistTaps="handled">
 
       <SegmentedControl<'ingreso' | 'egreso'>
         options={[
@@ -174,6 +185,8 @@ export default function NuevaTx() {
         variant={esIngreso ? 'success' : 'destructive'}
         label={botonLabel}
         onPress={guardar}
+        loading={isSubmitting}
+        disabled={isSubmitting}
       />
       </ScrollView>
     </SafeAreaView>
