@@ -13,6 +13,7 @@ import { useSessionStore } from '../../src/stores/sessionStore';
 import { aCentavos, aUnidades, parsearMonto } from '../../src/utils/dinero';
 import { SegmentedControl } from '../../src/components/ui/SegmentedControl';
 import { TextField } from '../../src/components/ui/TextField';
+import { MoneyInput } from '../../src/components/ui/MoneyInput';
 import { Button } from '../../src/components/ui/Button';
 import { Chip } from '../../src/components/ui/Chip';
 import { colors, spacing, fontSize, fontWeight } from '../../src/theme';
@@ -138,16 +139,13 @@ export default function NuevaTx() {
         activeColor={esIngreso ? colors.success : colors.error}
       />
 
-      <TextField
+      <MoneyInput
         label="Monto"
         large
-        placeholder="0.00"
-        keyboardType="numeric"
         value={monto}
-        onChangeText={setMonto}
+        onChangeValue={setMonto}
         error={errorField === 'monto' ? error : undefined}
       />
-      <Text style={s.hint}>Usa punto o coma para miles y decimales (ej: 1.500,50)</Text>
 
       <TextField
         label="Descripción"
@@ -202,6 +200,5 @@ const s = StyleSheet.create({
   cajas: {
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
   },
-  hint: { fontSize: fontSize.xs, color: colors.text.tertiary },
   err: { fontSize: fontSize.sm, color: colors.error },
 });

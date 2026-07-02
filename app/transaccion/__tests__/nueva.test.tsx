@@ -74,7 +74,7 @@ describe('Nueva transacción', () => {
     await render(<NuevaTx />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByPlaceholderText('0.00'), '100');
+    await user.type(screen.getByPlaceholderText('Ingresa un monto'), '100');
     await user.press(screen.getByText('Registrar ingreso'));
 
     expect(crearIngreso).toHaveBeenCalledWith(10000, '');
@@ -88,18 +88,18 @@ describe('Nueva transacción', () => {
 
     await user.press(screen.getByText('Egreso'));
     await user.press(screen.getByText('Gastos'));
-    await user.type(screen.getByPlaceholderText('0.00'), '50');
+    await user.type(screen.getByPlaceholderText('Ingresa un monto'), '50');
     await user.press(screen.getByText('Registrar egreso'));
 
     expect(crearEgreso).toHaveBeenCalledWith(5000, 'c1', '');
     expect(crearIngreso).not.toHaveBeenCalled();
   });
 
-  it('normaliza coma decimal (es-CO) antes de convertir a centavos', async () => {
+  it('normaliza el punto decimal antes de convertir a centavos', async () => {
     await render(<NuevaTx />);
     const user = userEvent.setup();
 
-    await user.type(screen.getByPlaceholderText('0.00'), '100,50');
+    await user.type(screen.getByPlaceholderText('Ingresa un monto'), '100.50');
     await user.press(screen.getByText('Registrar ingreso'));
 
     expect(crearIngreso).toHaveBeenCalledWith(10050, '');
@@ -110,7 +110,7 @@ describe('Nueva transacción', () => {
     const user = userEvent.setup();
 
     await user.press(screen.getByText('Egreso'));
-    await user.type(screen.getByPlaceholderText('0.00'), '50');
+    await user.type(screen.getByPlaceholderText('Ingresa un monto'), '50');
     await user.press(screen.getByText('Registrar egreso'));
 
     expect(await screen.findByText('Elige una caja para el egreso')).toBeTruthy();
@@ -129,11 +129,11 @@ describe('Nueva transacción', () => {
     expect(crearEgreso).not.toHaveBeenCalled();
   });
 
-  it('muestra un hint aclarando el uso de punto/coma para decimales', async () => {
+  it('muestra el campo de monto con prefijo de moneda', async () => {
     await render(<NuevaTx />);
 
-    expect(screen.getByPlaceholderText('0.00')).toBeTruthy();
-    expect(screen.getByText('Usa punto o coma para miles y decimales (ej: 1.500,50)')).toBeTruthy();
+    expect(screen.getByPlaceholderText('Ingresa un monto')).toBeTruthy();
+    expect(screen.getByText('$')).toBeTruthy();
   });
 });
 
