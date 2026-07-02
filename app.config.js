@@ -18,7 +18,6 @@ export default {
     },
     android: {
       package: "com.hugobox.app",
-      versionCode: 1,
       googleServicesFile: process.env.GOOGLE_SERVICES_JSON ?? "./google-services.json",
       adaptiveIcon: {
         backgroundColor: "#E6F4FE",
