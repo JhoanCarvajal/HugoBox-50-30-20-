@@ -72,20 +72,42 @@ describe('FilaMovimiento', () => {
     expect(screen.getByText(`-${formatearMoneda(5000)}`)).toBeTruthy();
   });
 
-  it('sin desglose no ofrece el chevron', async () => {
+  it('sin desglose no muestra el chevron', async () => {
     await render(<FilaMovimiento {...props} vista={vistaParcial} />);
 
-    expect(screen.queryByLabelText('Ver reparto')).toBeNull();
+    expect(screen.queryByTestId('chevron')).toBeNull();
   });
 
-  it('con desglose, el chevron alterna sin abrir la edición', async () => {
+  it('con desglose, tocar la fila alterna el reparto sin abrir la edición', async () => {
     await render(<FilaMovimiento {...props} vista={vistaCompleta} />);
     const user = userEvent.setup();
 
-    await user.press(screen.getByLabelText('Ver reparto'));
+    await user.press(screen.getByTestId('fila-pressable'));
 
     expect(props.onToggle).toHaveBeenCalledWith('i1');
     expect(props.onEditar).not.toHaveBeenCalled();
+  });
+
+  it('sin desglose, tocar la fila abre la edición', async () => {
+    await render(<FilaMovimiento {...props} vista={vistaParcial} />);
+    const user = userEvent.setup();
+
+    await user.press(screen.getByTestId('fila-pressable'));
+
+    expect(props.onEditar).toHaveBeenCalledWith('i1');
+    expect(props.onToggle).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['con desglose', vistaCompleta],
+    ['sin desglose', vistaParcial],
+  ])('mantener pulsada una fila %s borra', async (_caso, vista) => {
+    await render(<FilaMovimiento {...props} vista={vista} />);
+    const user = userEvent.setup();
+
+    await user.longPress(screen.getByTestId('fila-pressable'));
+
+    expect(props.onBorrar).toHaveBeenCalledWith('i1');
   });
 
   it('colapsada no muestra las cajas del reparto', async () => {
@@ -101,31 +123,56 @@ describe('FilaMovimiento', () => {
     expect(screen.getByText('Ahorros')).toBeTruthy();
     expect(screen.getByText(formatearMoneda(30000))).toBeTruthy();
     expect(screen.getByText(formatearMoneda(70000))).toBeTruthy();
-    expect(screen.getByLabelText('Ocultar reparto')).toBeTruthy();
   });
 
-  it('tocar la fila edita y mantener pulsado borra', async () => {
-    await render(<FilaMovimiento {...props} vista={vistaCompleta} />);
+  it('desde el panel expandido se abre la edición', async () => {
+    await render(<FilaMovimiento {...props} vista={vistaCompleta} expandido />);
     const user = userEvent.setup();
 
-    await user.press(screen.getByText('Sueldo'));
-    expect(props.onEditar).toHaveBeenCalledWith('i1');
+    await user.press(screen.getByText('Editar'));
 
-    await user.longPress(screen.getByText('Sueldo'));
+    expect(props.onEditar).toHaveBeenCalledWith('i1');
+  });
+
+  it('desde el panel expandido se borra el movimiento', async () => {
+    await render(<FilaMovimiento {...props} vista={vistaCompleta} expandido />);
+    const user = userEvent.setup();
+
+    await user.press(screen.getByText('Borrar'));
+
     expect(props.onBorrar).toHaveBeenCalledWith('i1');
   });
 
-  it('el chevron vive fuera del Pressable de la fila, no dentro', async () => {
-    // Aserción estructural a propósito: `user.press` despacha el evento sobre
-    // el propio nodo y nunca simula el burbujeo hacia un Pressable ancestro,
-    // así que un test de interacción pasaría igual con el chevron anidado.
-    // Si el chevron acabara dentro de la fila, expandir dispararía la edición.
+  it('colapsada no ofrece las acciones del panel', async () => {
+    await render(<FilaMovimiento {...props} vista={vistaCompleta} />);
+
+    expect(screen.queryByText('Editar')).toBeNull();
+    expect(screen.queryByText('Borrar')).toBeNull();
+  });
+
+  it('una fila expandible anuncia su estado a los lectores de pantalla', async () => {
+    await render(<FilaMovimiento {...props} vista={vistaCompleta} expandido />);
+
+    expect(screen.getByTestId('fila-pressable').props.accessibilityState.expanded).toBe(true);
+  });
+
+  it('una fila sin desglose no se anuncia como expandible', async () => {
+    // `expanded: false` haría que el lector de pantalla prometiera un
+    // desplegable que esta fila no tiene: al tocarla se abre la edición.
+    await render(<FilaMovimiento {...props} vista={vistaParcial} />);
+
+    expect(screen.getByTestId('fila-pressable').props.accessibilityState?.expanded).toBeUndefined();
+  });
+
+  it('el chevron vive dentro del Pressable de la fila', async () => {
+    // Ya no es un botón hermano: la fila entera es el disparador del
+    // desplegable, así que el chevron pasa a ser un indicador decorativo
+    // dentro de ella y no debe capturar el toque por su cuenta.
     await render(<FilaMovimiento {...props} vista={vistaCompleta} />);
 
     const fila = screen.getByTestId('fila-pressable');
 
-    expect(within(fila).queryByLabelText('Ver reparto')).toBeNull();
-    expect(screen.getByLabelText('Ver reparto')).toBeTruthy();
+    expect(within(fila).getByTestId('chevron')).toBeTruthy();
   });
 
   it('con desglose vacío no renderiza el contenedor aunque expandido sea true', async () => {

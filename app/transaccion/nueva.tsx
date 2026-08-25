@@ -8,7 +8,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCajas } from '../../src/features/cajas/useCajas';
 import { useTransacciones } from '../../src/features/transacciones/useTransacciones';
 import { txFormSchema } from '../../src/features/transacciones/txSchema';
-import { obtenerTransaccion } from '../../src/features/transacciones/transaccionesService';
+import { obtenerTransaccion, borrarTransaccion } from '../../src/features/transacciones/transaccionesService';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { aCentavos, aUnidades, parsearMonto } from '../../src/utils/dinero';
 import { SegmentedControl } from '../../src/components/ui/SegmentedControl';
@@ -118,6 +118,34 @@ export default function NuevaTx() {
     }
   };
 
+  // Borrar desde aquí es el único camino visible para los movimientos cuya
+  // fila del historial no despliega nada (egresos, ingresos sin reparto y
+  // cualquier fila bajo un filtro de caja): tocarlas abre esta pantalla, así
+  // que la acción destructiva deja de vivir solo en el long press.
+  const borrar = () => {
+    Alert.alert('Borrar', '¿Eliminar este movimiento? Se revertirán los saldos.', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Borrar',
+        style: 'destructive',
+        onPress: async () => {
+          if (!uid || !editId) return;
+          setIsSubmitting(true);
+          try {
+            await borrarTransaccion(uid, editId);
+            router.back();
+          } catch (err) {
+            // Igual que al guardar: se informa y se deja el formulario abierto
+            // para reintentar, en vez de navegar como si hubiera funcionado.
+            Alert.alert('No se pudo borrar', err instanceof Error ? err.message : String(err));
+          } finally {
+            setIsSubmitting(false);
+          }
+        },
+      },
+    ]);
+  };
+
   const esIngreso = tipo === 'ingreso';
   const botonLabel = esEdicion
     ? 'Guardar cambios'
@@ -188,6 +216,17 @@ export default function NuevaTx() {
         loading={isSubmitting}
         disabled={isSubmitting}
       />
+
+      {esEdicion && (
+        <Pressable
+          onPress={borrar}
+          disabled={isSubmitting}
+          accessibilityRole="button"
+          style={s.borrar}
+        >
+          <Text style={s.borrarTxt}>Borrar movimiento</Text>
+        </Pressable>
+      )}
       </ScrollView>
     </SafeAreaView>
   );
@@ -214,4 +253,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm,
   },
   err: { fontSize: fontSize.sm, color: colors.error },
+  borrar: { alignSelf: 'center', paddingVertical: spacing.sm, paddingHorizontal: spacing.lg },
+  borrarTxt: { fontSize: fontSize.md, fontWeight: fontWeight.semibold, color: colors.error },
 });

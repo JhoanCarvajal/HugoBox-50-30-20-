@@ -1,4 +1,5 @@
 import { View, Text, StyleSheet, Pressable } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from './ui/Avatar';
 import { MovimientoVista } from '../features/transacciones/vistaHistorial';
 import { formatearMoneda } from '../utils/dinero';
@@ -19,8 +20,11 @@ interface Props {
  * total del movimiento o la porción que entró a la caja filtrada (ver
  * `vistaHistorial.ts`).
  *
- * El chevron es un `Pressable` HERMANO del de la fila, no un hijo: si fuera
- * hijo, desplegar el reparto dispararía también la navegación a editar.
+ * Tocar la fila hace una cosa u otra según tenga reparto que enseñar:
+ * despliega el desglose si lo hay, y si no (egresos, ingresos sin reparto y
+ * cualquier fila bajo un filtro de caja) abre directamente la edición. El
+ * gesto destructivo se mantiene en el long press, y el desplegable ofrece
+ * además botones explícitos para editar y borrar.
  */
 export function FilaMovimiento({ vista, expandido, onToggle, onEditar, onBorrar }: Props) {
   const { tx, montoEfectivo, esParcial, porcentaje, subtitulo, desglose } = vista;
@@ -32,42 +36,47 @@ export function FilaMovimiento({ vista, expandido, onToggle, onEditar, onBorrar 
 
   return (
     <View style={styles.card}>
-      <View style={styles.top}>
-        <Pressable
-          testID="fila-pressable"
-          style={styles.row}
-          onPress={() => onEditar(tx.id)}
-          onLongPress={() => onBorrar(tx.id)}
-        >
-          <Avatar label={inicial(desc)} color={colors.text.tertiary} tint={colors.divider} size={40} shape="circle" />
-          <View style={styles.info}>
-            <Text style={styles.desc} numberOfLines={1}>{desc}</Text>
-            <Text style={styles.meta}>{meta}</Text>
-            {esParcial && (
-              <Text style={styles.contexto}>
-                de {formatearMoneda(tx.monto)}
-                {porcentaje != null ? ` · ${porcentaje}%` : ''}
-              </Text>
-            )}
-          </View>
-          <Text style={[styles.monto, esIngreso ? styles.in : styles.out]}>
-            {esIngreso ? '+' : '-'}{formatearMoneda(montoEfectivo)}
-          </Text>
-        </Pressable>
+      <Pressable
+        testID="fila-pressable"
+        style={styles.row}
+        onPress={() => (puedeExpandir ? onToggle(tx.id) : onEditar(tx.id))}
+        onLongPress={() => onBorrar(tx.id)}
+        accessibilityRole="button"
+        // Sin reparto no se anuncia como expandible: prometería un
+        // desplegable que esa fila no tiene.
+        accessibilityState={puedeExpandir ? { expanded: expandido } : undefined}
+        accessibilityHint={
+          puedeExpandir
+            ? (expandido ? 'Oculta el reparto entre cajas' : 'Muestra el reparto entre cajas')
+            : 'Abre la edición del movimiento'
+        }
+      >
+        <Avatar label={inicial(desc)} color={colors.text.tertiary} tint={colors.divider} size={40} shape="circle" />
+        <View style={styles.info}>
+          <Text style={styles.desc} numberOfLines={1}>{desc}</Text>
+          <Text style={styles.meta}>{meta}</Text>
+          {esParcial && (
+            <Text style={styles.contexto}>
+              de {formatearMoneda(tx.monto)}
+              {porcentaje != null ? ` · ${porcentaje}%` : ''}
+            </Text>
+          )}
+        </View>
+        <Text style={[styles.monto, esIngreso ? styles.in : styles.out]}>
+          {esIngreso ? '+' : '-'}{formatearMoneda(montoEfectivo)}
+        </Text>
 
+        {/* Indicador decorativo: el toque lo captura la fila entera. */}
         {puedeExpandir && (
-          <Pressable
-            onPress={() => onToggle(tx.id)}
-            hitSlop={8}
-            accessibilityRole="button"
-            accessibilityLabel={expandido ? 'Ocultar reparto' : 'Ver reparto'}
-            accessibilityState={{ expanded: expandido }}
-            style={styles.chevron}
-          >
-            <Text style={styles.chevronTxt}>{expandido ? '⌃' : '⌄'}</Text>
-          </Pressable>
+          <Ionicons
+            testID="chevron"
+            name="chevron-down"
+            size={16}
+            color={colors.text.tertiary}
+            style={[styles.chevron, expandido && styles.chevronAbierto]}
+          />
         )}
-      </View>
+      </Pressable>
 
       {puedeExpandir && expandido && (
         <View testID="desglose" style={styles.desglose}>
@@ -77,6 +86,25 @@ export function FilaMovimiento({ vista, expandido, onToggle, onEditar, onBorrar 
               <Text style={styles.desgloseMonto}>{formatearMoneda(d.monto)}</Text>
             </View>
           ))}
+
+          <View style={styles.acciones}>
+            <Pressable
+              onPress={() => onEditar(tx.id)}
+              hitSlop={8}
+              accessibilityRole="button"
+              style={styles.accion}
+            >
+              <Text style={styles.accionTxt}>Editar</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => onBorrar(tx.id)}
+              hitSlop={8}
+              accessibilityRole="button"
+              style={styles.accion}
+            >
+              <Text style={[styles.accionTxt, styles.accionBorrar]}>Borrar</Text>
+            </Pressable>
+          </View>
         </View>
       )}
     </View>
@@ -90,8 +118,7 @@ const styles = StyleSheet.create({
     padding: spacing.md,
     ...shadows.card,
   },
-  top: { flexDirection: 'row', alignItems: 'center' },
-  row: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
   info: { flex: 1 },
   desc: { fontSize: fontSize.md, color: colors.text.primary },
   meta: { fontSize: fontSize.xs, color: colors.text.tertiary, marginTop: 2 },
@@ -99,8 +126,8 @@ const styles = StyleSheet.create({
   monto: { fontSize: fontSize.md, fontWeight: fontWeight.bold },
   in: { color: colors.success },
   out: { color: colors.error },
-  chevron: { paddingLeft: spacing.sm, paddingVertical: spacing.xs },
-  chevronTxt: { fontSize: fontSize.md, color: colors.text.tertiary },
+  chevron: { marginLeft: -spacing.xs },
+  chevronAbierto: { transform: [{ rotate: '180deg' }] },
   desglose: {
     marginTop: spacing.sm,
     paddingTop: spacing.sm,
@@ -111,4 +138,13 @@ const styles = StyleSheet.create({
   desgloseFila: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm },
   desgloseNombre: { flex: 1, fontSize: fontSize.xs, color: colors.text.secondary },
   desgloseMonto: { fontSize: fontSize.xs, color: colors.text.primary, fontWeight: fontWeight.semibold },
+  acciones: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: spacing.lg,
+    marginTop: spacing.xs,
+  },
+  accion: { paddingVertical: spacing.xs },
+  accionTxt: { fontSize: fontSize.sm, fontWeight: fontWeight.semibold, color: colors.primary },
+  accionBorrar: { color: colors.error },
 });

@@ -260,7 +260,7 @@ describe('Historial', () => {
     const user = userEvent.setup();
 
     await render(<Historial />);
-    await user.press(screen.getByLabelText('Ver reparto'));
+    await user.press(screen.getByTestId('fila-pressable'));
 
     expect(screen.getByText(formatearMoneda(30000))).toBeTruthy();
     expect(screen.getByText(formatearMoneda(70000))).toBeTruthy();
@@ -274,7 +274,7 @@ describe('Historial', () => {
 
     await render(<Historial />);
     // Expandir el reparto sin filtro de caja.
-    await user.press(screen.getByLabelText('Ver reparto'));
+    await user.press(screen.getByTestId('fila-pressable'));
     expect(screen.getByTestId('desglose')).toBeTruthy();
 
     // Filtrar por Gastos: el ingreso sigue mostrándose (esa caja sí la

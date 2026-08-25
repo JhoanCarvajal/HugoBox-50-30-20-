@@ -1,9 +1,10 @@
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { Alert } from 'react-native';
+import { act, render, screen, userEvent } from '@testing-library/react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import NuevaTx from '../nueva';
 import { useCajas } from '../../../src/features/cajas/useCajas';
 import { useTransacciones } from '../../../src/features/transacciones/useTransacciones';
-import { obtenerTransaccion } from '../../../src/features/transacciones/transaccionesService';
+import { obtenerTransaccion, borrarTransaccion } from '../../../src/features/transacciones/transaccionesService';
 import { useSessionStore } from '../../../src/stores/sessionStore';
 
 // Se mockea `expo-router` para que `router.back()` no intente navegar de verdad
@@ -30,9 +31,11 @@ jest.mock('../../../src/features/transacciones/useTransacciones', () => ({
 }));
 
 // Se mockea `obtenerTransaccion` (usado solo en modo edición para precargar
-// el formulario) para no depender del emulador.
+// el formulario) y `borrarTransaccion` (el botón de borrado del pie) para no
+// depender del emulador.
 jest.mock('../../../src/features/transacciones/transaccionesService', () => ({
   obtenerTransaccion: jest.fn(),
+  borrarTransaccion: jest.fn(),
 }));
 
 const cajasMock = [
@@ -129,6 +132,12 @@ describe('Nueva transacción', () => {
     expect(crearEgreso).not.toHaveBeenCalled();
   });
 
+  it('en modo alta no ofrece borrar: todavía no hay movimiento que borrar', async () => {
+    await render(<NuevaTx />);
+
+    expect(screen.queryByText('Borrar movimiento')).toBeNull();
+  });
+
   it('muestra el campo de monto con prefijo de moneda', async () => {
     await render(<NuevaTx />);
 
@@ -161,6 +170,10 @@ describe('Nueva transacción — modo edición', () => {
     (useCajas as jest.Mock).mockReturnValue({ cajas: cajasMock, cargando: false });
     (useTransacciones as jest.Mock).mockReturnValue({ crearIngreso, crearEgreso, editar });
     (obtenerTransaccion as jest.Mock).mockResolvedValue(txEgresoMock);
+    (borrarTransaccion as jest.Mock).mockResolvedValue(undefined);
+    // El borrado es destructivo: pasa por `Alert.alert` y solo se ejecuta
+    // desde el botón de confirmación (ver `confirmarBorrado`).
+    jest.spyOn(Alert, 'alert').mockImplementation(() => {});
     useSessionStore.setState({
       usuario: {
         uid: 'u1', email: null, displayName: null, monedaPreferida: 'COP', createdAt: 1,
@@ -202,4 +215,67 @@ describe('Nueva transacción — modo edición', () => {
 
     expect(editar).toHaveBeenCalledWith('tx1', expect.objectContaining({ cajaId: 'c1' }));
   });
+
+  it('pide confirmación antes de borrar el movimiento', async () => {
+    await render(<NuevaTx />);
+    const user = userEvent.setup();
+
+    await screen.findByDisplayValue('50');
+    await user.press(screen.getByText('Borrar movimiento'));
+
+    expect(Alert.alert).toHaveBeenCalledWith(
+      'Borrar',
+      '¿Eliminar este movimiento? Se revertirán los saldos.',
+      expect.any(Array),
+    );
+    expect(borrarTransaccion).not.toHaveBeenCalled();
+  });
+
+  it('al confirmar borra el movimiento del usuario en sesión', async () => {
+    await render(<NuevaTx />);
+    const user = userEvent.setup();
+
+    await screen.findByDisplayValue('50');
+    await user.press(screen.getByText('Borrar movimiento'));
+    await confirmarBorrado();
+
+    expect(borrarTransaccion).toHaveBeenCalledWith('u1', 'tx1');
+  });
+
+  it('tras borrar vuelve a la pantalla anterior', async () => {
+    await render(<NuevaTx />);
+    const user = userEvent.setup();
+
+    await screen.findByDisplayValue('50');
+    await user.press(screen.getByText('Borrar movimiento'));
+    await confirmarBorrado();
+
+    expect(back).toHaveBeenCalledTimes(1);
+  });
+
+  it('si el borrado falla avisa y deja al usuario en el formulario', async () => {
+    (borrarTransaccion as jest.Mock).mockRejectedValueOnce(new Error('Sin conexión'));
+
+    await render(<NuevaTx />);
+    const user = userEvent.setup();
+
+    await screen.findByDisplayValue('50');
+    await user.press(screen.getByText('Borrar movimiento'));
+    await confirmarBorrado();
+
+    expect(Alert.alert).toHaveBeenCalledWith('No se pudo borrar', 'Sin conexión');
+    expect(back).not.toHaveBeenCalled();
+  });
 });
+
+/**
+ * Ejecuta el botón destructivo del `Alert.alert` de confirmación, que es la
+ * única vía por la que el formulario llega a borrar de verdad.
+ */
+async function confirmarBorrado() {
+  const [, , botones] = (Alert.alert as jest.Mock).mock.calls.at(-1)!;
+  const confirmar = (botones as { style?: string; onPress?: () => void }[])
+    .find((b) => b.style === 'destructive');
+
+  await act(async () => { await confirmar!.onPress!(); });
+}
