@@ -1,11 +1,12 @@
-import { render, screen } from '@testing-library/react-native';
+import { render, screen, userEvent } from '@testing-library/react-native';
 import Cajas from '../index';
+import { useRouter } from 'expo-router';
 import { useCajas } from '../../../src/features/cajas/useCajas';
 import { useHistorial } from '../../../src/features/transacciones/useHistorial';
 import { useSessionStore } from '../../../src/stores/sessionStore';
 
 jest.mock('expo-router', () => ({
-  useRouter: () => ({ push: jest.fn() }),
+  useRouter: jest.fn(),
 }));
 
 jest.mock('../../../src/features/cajas/useCajas', () => ({
@@ -21,8 +22,11 @@ const cajasMock = [
 ];
 
 describe('Dashboard (index)', () => {
+  const push = jest.fn();
+
   beforeEach(() => {
     jest.clearAllMocks();
+    (useRouter as jest.Mock).mockReturnValue({ push });
     (useCajas as jest.Mock).mockReturnValue({ cajas: [], cargando: false });
     (useHistorial as jest.Mock).mockReturnValue({ items: [], cargando: false });
     useSessionStore.setState({
@@ -75,5 +79,23 @@ describe('Dashboard (index)', () => {
     });
     await render(<Cajas />);
     expect(screen.getByText('Hola, sin-nombre@example.com')).toBeTruthy();
+  });
+
+  it('el pill de Ingresos navega al historial filtrado por ingresos', async () => {
+    await render(<Cajas />);
+    const user = userEvent.setup();
+
+    await user.press(screen.getByLabelText('Ver historial de ingresos'));
+
+    expect(push).toHaveBeenCalledWith({ pathname: '/historial', params: { tipo: 'ingreso' } });
+  });
+
+  it('el pill de Egresos navega al historial filtrado por egresos', async () => {
+    await render(<Cajas />);
+    const user = userEvent.setup();
+
+    await user.press(screen.getByLabelText('Ver historial de egresos'));
+
+    expect(push).toHaveBeenCalledWith({ pathname: '/historial', params: { tipo: 'egreso' } });
   });
 });

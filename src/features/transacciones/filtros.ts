@@ -15,13 +15,21 @@ export interface FiltroHistorial {
   cajaId?: string | null;
   desde?: number | null;
   hasta?: number | null;
+  tipo?: 'ingreso' | 'egreso' | null;
 }
 
 export function filtrarHistorial(items: Transaccion[], filtro: FiltroHistorial): Transaccion[] {
   return items.filter((item) => {
+    if (filtro.tipo != null && item.tipo !== filtro.tipo) return false;
     if (filtro.cajaId != null) {
+      // El `> 0` importa: `repartirIngreso` emite una entrada por CADA caja
+      // activa, incluidas las que el redondeo de `Math.floor` deja en 0 (caja
+      // de porcentaje bajo + monto pequeño). Sin esa condición, el historial
+      // filtrado por esa caja se llenaría de filas de +$0.00 por ingresos que
+      // no le aportaron nada. Los egresos entran por `cajaId` y no se ven
+      // afectados: son movimientos de la caja aunque su importe sea 0.
       const tocaLaCaja = item.cajaId === filtro.cajaId
-        || item.reparto.some((r) => r.cajaId === filtro.cajaId);
+        || item.reparto.some((r) => r.cajaId === filtro.cajaId && r.monto > 0);
       if (!tocaLaCaja) return false;
     }
     if (filtro.desde != null && item.fecha < filtro.desde) return false;

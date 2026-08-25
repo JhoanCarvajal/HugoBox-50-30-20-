@@ -1,17 +1,19 @@
 import { Alert } from 'react-native';
-import { render, screen, userEvent } from '@testing-library/react-native';
-import { useRouter } from 'expo-router';
+import { render, screen, userEvent, within } from '@testing-library/react-native';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Historial from '../historial';
 import { useHistorial } from '../../../src/features/transacciones/useHistorial';
 import { useCajas } from '../../../src/features/cajas/useCajas';
 import { borrarTransaccion } from '../../../src/features/transacciones/transaccionesService';
 import { useSessionStore } from '../../../src/stores/sessionStore';
 import { formatearFecha } from '../../../src/utils/fecha';
+import { formatearMoneda } from '../../../src/utils/dinero';
 
 // Se mockea `expo-router` para poder espiar `router.push` (navegación a
 // editar) sin depender de un Stack real montado en el test.
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
+  useLocalSearchParams: jest.fn(() => ({})),
 }));
 
 // Se mockea `useHistorial` (capa de datos en tiempo real de Firestore) para no
@@ -50,10 +52,12 @@ const itemsMock = [
 
 describe('Historial', () => {
   const push = jest.fn();
+  const setParams = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useRouter as jest.Mock).mockReturnValue({ push });
+    (useRouter as jest.Mock).mockReturnValue({ push, setParams });
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
     (useHistorial as jest.Mock).mockReturnValue({ items: itemsMock, cargando: false });
     (useCajas as jest.Mock).mockReturnValue({ cajas: [] });
     useSessionStore.setState({
@@ -104,9 +108,11 @@ describe('Historial', () => {
   });
 
   it('muestra la fecha del movimiento en la fila', async () => {
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA] });
+
     await render(<Historial />);
 
-    expect(screen.getByText(formatearFecha(2))).toBeTruthy();
+    expect(screen.getByText(`Gastos · ${formatearFecha(2)}`)).toBeTruthy();
   });
 
   it('sin movimientos muestra el mensaje de estado vacío', async () => {
@@ -182,5 +188,189 @@ describe('Historial', () => {
     expect(screen.getByText('No hay movimientos con estos filtros')).toBeTruthy();
     expect(screen.queryByText('Aún no tienes movimientos')).toBeNull();
     expect(screen.queryByText('Ropa')).toBeNull();
+  });
+
+  const ingresoRepartido = {
+    id: 'i1', tipo: 'ingreso' as const, monto: 100000, fecha: 3, descripcion: 'Sueldo',
+    cajaId: null, reparto: [{ cajaId: 'c1', monto: 30000 }, { cajaId: 'c2', monto: 70000 }], createdAt: 3,
+  };
+
+  it('muestra el control de tipo con las tres opciones', async () => {
+    await render(<Historial />);
+
+    expect(screen.getByText('Todos')).toBeTruthy();
+    expect(screen.getByText('Ingresos')).toBeTruthy();
+    expect(screen.getByText('Egresos')).toBeTruthy();
+  });
+
+  it('filtrar por Ingresos oculta los egresos', async () => {
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+    const user = userEvent.setup();
+
+    await render(<Historial />);
+    await user.press(screen.getByText('Ingresos'));
+
+    expect(screen.getByText('Sueldo')).toBeTruthy();
+    expect(screen.queryByText('Mercado')).toBeNull();
+  });
+
+  it('filtrar por Egresos oculta los ingresos', async () => {
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+    const user = userEvent.setup();
+
+    await render(<Historial />);
+    await user.press(screen.getByText('Egresos'));
+
+    expect(screen.getByText('Mercado')).toBeTruthy();
+    expect(screen.queryByText('Sueldo')).toBeNull();
+  });
+
+  it(
+    'al filtrar por una caja, un ingreso repartido muestra la porción que entró '
+    + 'a esa caja y no el monto total',
+    async () => {
+      (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+      (useHistorial as jest.Mock).mockReturnValue({ items: [ingresoRepartido], cargando: false });
+      const user = userEvent.setup();
+
+      await render(<Historial />);
+      // Sin filtro: el movimiento vale su 100%.
+      expect(screen.getByText(`+${formatearMoneda(100000)}`)).toBeTruthy();
+
+      await user.press(screen.getByText('Gastos'));
+
+      // Con filtro de caja: solo la porción del reparto (30%).
+      expect(screen.getByText(`+${formatearMoneda(30000)}`)).toBeTruthy();
+      expect(screen.queryByText(`+${formatearMoneda(100000)}`)).toBeNull();
+      expect(screen.getByText(`de ${formatearMoneda(100000)} · 30%`)).toBeTruthy();
+    },
+  );
+
+  it('el desglose se expande sin navegar a editar', async () => {
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({ items: [ingresoRepartido], cargando: false });
+    const user = userEvent.setup();
+
+    await render(<Historial />);
+    await user.press(screen.getByLabelText('Ver reparto'));
+
+    expect(screen.getByText(formatearMoneda(30000))).toBeTruthy();
+    expect(screen.getByText(formatearMoneda(70000))).toBeTruthy();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it('cambiar el filtro de caja no deja un desglose huérfano', async () => {
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({ items: [ingresoRepartido], cargando: false });
+    const user = userEvent.setup();
+
+    await render(<Historial />);
+    // Expandir el reparto sin filtro de caja.
+    await user.press(screen.getByLabelText('Ver reparto'));
+    expect(screen.getByTestId('desglose')).toBeTruthy();
+
+    // Filtrar por Gastos: el ingreso sigue mostrándose (esa caja sí la
+    // tocó), pero la fila pasa a la lente «impacto en caja» y `desglose`
+    // queda en `[]`. El desglose ya pinta 'Gastos' como texto suelto y el
+    // chip de filtro tiene el mismo texto: se acota con `within()` al
+    // contenedor de chips para no chocar con "found multiple elements".
+    const chipsCaja = screen.getByTestId('chips-caja');
+    await user.press(within(chipsCaja).getByText('Gastos'));
+
+    // Sin el reseteo del Set de expandidos al cambiar `filtroCaja`, el id
+    // seguiría marcado como expandido y quedaría el separador huérfano (sin
+    // chevron para cerrarlo, porque `desglose` ya está vacío).
+    expect(screen.queryByTestId('desglose')).toBeNull();
+  });
+
+  it('el parámetro tipo=ingreso deja el historial filtrado por ingresos', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ tipo: 'ingreso' });
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+
+    await render(<Historial />);
+
+    expect(screen.getByText('Sueldo')).toBeTruthy();
+    expect(screen.queryByText('Mercado')).toBeNull();
+  });
+
+  it('limpia el parámetro de la ruta tras consumirlo', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ tipo: 'ingreso' });
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+
+    await render(<Historial />);
+
+    // Sin este limpiado, el parámetro queda pegado a la ruta del tab y vuelve
+    // a forzar el filtro cada vez que el usuario regrese desde otro tab.
+    expect(setParams).toHaveBeenCalledWith({ tipo: undefined });
+  });
+
+  it('sin parámetro no se toca el filtro ni se limpia la ruta', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+
+    await render(<Historial />);
+
+    expect(screen.getByText('Sueldo')).toBeTruthy();
+    expect(screen.getByText('Mercado')).toBeTruthy();
+    expect(setParams).not.toHaveBeenCalled();
+  });
+
+  it('el parámetro resetea los filtros de caja y fecha puestos a mano', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+    const user = userEvent.setup();
+
+    await render(<Historial />);
+
+    // El usuario acota a mano: por caja y por un rango que deja fuera estas
+    // fechas de prueba (epoch 2 y 3 ms, es decir 1970).
+    await user.press(screen.getByText('Gastos'));
+    await user.press(screen.getByText('Este mes'));
+    expect(screen.queryByText('Sueldo')).toBeNull();
+
+    // Llega la navegación desde el pill de Ingresos del dashboard.
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ tipo: 'ingreso' });
+    await screen.rerender(<Historial />);
+
+    // El reset de fecha devuelve el ingreso a la lista, y el de caja hace que
+    // se muestre por su monto total en vez de por la porción de Gastos.
+    expect(screen.getByText('Sueldo')).toBeTruthy();
+    expect(screen.getByText(`+${formatearMoneda(100000)}`)).toBeTruthy();
+    expect(screen.queryByText(`+${formatearMoneda(30000)}`)).toBeNull();
+  });
+
+  it('ignora un valor de tipo que no sea ingreso ni egreso', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ tipo: 'INGRESO' });
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+
+    await render(<Historial />);
+
+    expect(screen.getByText('Sueldo')).toBeTruthy();
+    expect(screen.getByText('Mercado')).toBeTruthy();
+    expect(setParams).not.toHaveBeenCalled();
   });
 });

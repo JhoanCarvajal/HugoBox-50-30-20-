@@ -65,14 +65,24 @@ export default function Cajas() {
           <Text style={styles.balanceLabel}>Balance total</Text>
           <Text style={styles.balanceMonto}>{formatearMoneda(balanceTotal)}</Text>
           <View style={styles.pills}>
-            <View style={[styles.pill, styles.pillIn]}>
+            <Pressable
+              style={[styles.pill, styles.pillIn]}
+              onPress={() => router.push({ pathname: '/historial', params: { tipo: 'ingreso' } })}
+              accessibilityRole="button"
+              accessibilityLabel="Ver historial de ingresos"
+            >
               <Text style={styles.pillLabelIn}>Ingresos</Text>
               <Text style={styles.pillMontoIn}>+{formatearMoneda(ingresos)}</Text>
-            </View>
-            <View style={[styles.pill, styles.pillOut]}>
+            </Pressable>
+            <Pressable
+              style={[styles.pill, styles.pillOut]}
+              onPress={() => router.push({ pathname: '/historial', params: { tipo: 'egreso' } })}
+              accessibilityRole="button"
+              accessibilityLabel="Ver historial de egresos"
+            >
               <Text style={styles.pillLabelOut}>Egresos</Text>
               <Text style={styles.pillMontoOut}>-{formatearMoneda(egresos)}</Text>
-            </View>
+            </Pressable>
           </View>
         </View>
 

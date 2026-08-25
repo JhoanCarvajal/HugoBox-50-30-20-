@@ -1,24 +1,31 @@
-import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, ScrollView, Alert } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { View, Text, StyleSheet, FlatList, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useHistorial } from '../../src/features/transacciones/useHistorial';
 import { useCajas } from '../../src/features/cajas/useCajas';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { borrarTransaccion } from '../../src/features/transacciones/transaccionesService';
 import { filtrarHistorial, rangoFecha, ClaveRangoFecha } from '../../src/features/transacciones/filtros';
-import { formatearMoneda } from '../../src/utils/dinero';
-import { formatearFecha } from '../../src/utils/fecha';
+import { proyectarHistorial } from '../../src/features/transacciones/vistaHistorial';
 import { Chip } from '../../src/components/ui/Chip';
-import { Avatar } from '../../src/components/ui/Avatar';
-import { inicial } from '../../src/utils/colorCaja';
-import { colors, spacing, radius, fontSize, fontWeight, shadows } from '../../src/theme';
+import { SegmentedControl } from '../../src/components/ui/SegmentedControl';
+import { FilaMovimiento } from '../../src/components/FilaMovimiento';
+import { colors, spacing, fontSize, fontWeight } from '../../src/theme';
 
 const OPCIONES_FECHA: { clave: ClaveRangoFecha; etiqueta: string }[] = [
   { clave: 'todo', etiqueta: 'Todo' },
   { clave: 'mes', etiqueta: 'Este mes' },
   { clave: 'mesPasado', etiqueta: 'Mes pasado' },
   { clave: 'anio', etiqueta: 'Este año' },
+];
+
+type ClaveTipo = 'todos' | 'ingreso' | 'egreso';
+
+const OPCIONES_TIPO: { value: ClaveTipo; label: string }[] = [
+  { value: 'todos', label: 'Todos' },
+  { value: 'ingreso', label: 'Ingresos' },
+  { value: 'egreso', label: 'Egresos' },
 ];
 
 export default function Historial() {
@@ -28,12 +35,58 @@ export default function Historial() {
   const uid = useSessionStore((s) => s.usuario?.uid);
 
   const [filtroCaja, setFiltroCaja] = useState<string | null>(null);
+  const [filtroTipo, setFiltroTipo] = useState<ClaveTipo>('todos');
   const [filtroFecha, setFiltroFecha] = useState<ClaveRangoFecha>('todo');
+  // Set y no un solo id: se pueden abrir varios repartos a la vez para
+  // compararlos sin que abrir uno cierre el anterior.
+  const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
 
-  const itemsFiltrados = useMemo(() => {
+  // El dashboard navega aquí con `?tipo=ingreso|egreso` desde sus pills. Se
+  // resetean caja y fecha para que la lista coincida exactamente con la cifra
+  // que el usuario acaba de tocar, y se limpia el parámetro: si se dejara
+  // puesto, seguiría pegado a la ruta del tab y volvería a forzar el filtro
+  // cada vez que se regresara al historial desde otro tab.
+  const { tipo } = useLocalSearchParams<{ tipo?: string }>();
+
+  useEffect(() => {
+    if (tipo !== 'ingreso' && tipo !== 'egreso') return;
+    setFiltroTipo(tipo);
+    setFiltroCaja(null);
+    setFiltroFecha('todo');
+    router.setParams({ tipo: undefined });
+  }, [tipo]);
+
+  // Cambiar la caja filtrada puede vaciar el `desglose` de una fila que
+  // seguía expandida (un ingreso repartido deja de tocar la caja recién
+  // filtrada): el chevron desaparece pero, sin este reseteo, el bloque
+  // desplegado queda huérfano y sin control para cerrarlo. De paso corta una
+  // fuga: el Set dejaba de vaciarse nunca y acumulaba ids de filas que ya ni
+  // se muestran.
+  useEffect(() => {
+    setExpandidos(new Set());
+  }, [filtroCaja]);
+
+  const vistas = useMemo(() => {
     const { desde, hasta } = rangoFecha(filtroFecha, Date.now());
-    return filtrarHistorial(items, { cajaId: filtroCaja, desde, hasta });
-  }, [items, filtroCaja, filtroFecha]);
+    // El SegmentedControl necesita un valor concreto para marcar el segmento
+    // activo; el filtro usa `null` para «sin filtrar».
+    const filtro = {
+      cajaId: filtroCaja,
+      tipo: filtroTipo === 'todos' ? null : filtroTipo,
+      desde,
+      hasta,
+    };
+    return proyectarHistorial(filtrarHistorial(items, filtro), filtro, cajas);
+  }, [items, filtroCaja, filtroTipo, filtroFecha, cajas]);
+
+  const alternarExpandido = (id: string) => {
+    setExpandidos((prev) => {
+      const siguiente = new Set(prev);
+      if (siguiente.has(id)) siguiente.delete(id);
+      else siguiente.add(id);
+      return siguiente;
+    });
+  };
 
   const onEditar = (id: string) => router.push(`/transaccion/nueva?editId=${id}`);
 
@@ -59,7 +112,13 @@ export default function Historial() {
     <View style={styles.head}>
       <Text style={styles.titulo}>Historial</Text>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+      <SegmentedControl<ClaveTipo>
+        options={OPCIONES_TIPO}
+        value={filtroTipo}
+        onChange={setFiltroTipo}
+      />
+
+      <ScrollView testID="chips-caja" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
         <Chip label="Todas" active={!filtroCaja} onPress={() => setFiltroCaja(null)} />
         {cajas.map((c) => (
           <Chip key={c.id} label={c.nombre} active={filtroCaja === c.id} onPress={() => setFiltroCaja(c.id)} />
@@ -77,34 +136,19 @@ export default function Historial() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <FlatList
-        data={itemsFiltrados}
-        keyExtractor={(t) => t.id}
+        data={vistas}
+        keyExtractor={(v) => v.tx.id}
         ListHeaderComponent={encabezado}
         contentContainerStyle={styles.lista}
-        renderItem={({ item }) => {
-          const esIngreso = item.tipo === 'ingreso';
-          const cajaNombre = item.cajaId
-            ? cajas.find((c) => c.id === item.cajaId)?.nombre
-            : esIngreso
-              ? 'Reparto'
-              : undefined;
-          const meta = cajaNombre
-            ? `${cajaNombre} · ${formatearFecha(item.fecha)}`
-            : formatearFecha(item.fecha);
-          const desc = item.descripcion || item.tipo;
-          return (
-            <Pressable style={styles.row} onPress={() => onEditar(item.id)} onLongPress={() => onBorrar(item.id)}>
-              <Avatar label={inicial(desc)} color={colors.text.tertiary} tint={colors.divider} size={40} shape="circle" />
-              <View style={styles.info}>
-                <Text style={styles.desc} numberOfLines={1}>{desc}</Text>
-                <Text style={styles.meta}>{meta}</Text>
-              </View>
-              <Text style={[styles.monto, esIngreso ? styles.in : styles.out]}>
-                {esIngreso ? '+' : '-'}{formatearMoneda(item.monto)}
-              </Text>
-            </Pressable>
-          );
-        }}
+        renderItem={({ item }) => (
+          <FilaMovimiento
+            vista={item}
+            expandido={expandidos.has(item.tx.id)}
+            onToggle={alternarExpandido}
+            onEditar={onEditar}
+            onBorrar={onBorrar}
+          />
+        )}
         ListEmptyComponent={
           <Text style={styles.vacio}>
             {items.length === 0 ? 'Aún no tienes movimientos' : 'No hay movimientos con estos filtros'}
@@ -126,21 +170,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   chips: { gap: spacing.sm, paddingRight: spacing.lg },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-    backgroundColor: colors.surface,
-    borderRadius: radius.md,
-    padding: spacing.md,
-    ...shadows.card,
-  },
-  info: { flex: 1 },
-  desc: { fontSize: fontSize.md, color: colors.text.primary },
-  meta: { fontSize: fontSize.xs, color: colors.text.tertiary, marginTop: 2 },
-  monto: { fontSize: fontSize.md, fontWeight: fontWeight.bold },
-  in: { color: colors.success },
-  out: { color: colors.error },
   vacio: {
     color: colors.text.tertiary,
     fontSize: fontSize.md,
