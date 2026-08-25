@@ -94,6 +94,45 @@ describe('filtrarHistorial', () => {
     expect(items.length).toBe(2);
     expect(resultado).not.toBe(items);
   });
+
+  describe('filtrarHistorial · filtro por tipo', () => {
+    const ingreso = {
+      id: 'i1', tipo: 'ingreso' as const, monto: 100000, fecha: 3, descripcion: 'Sueldo',
+      cajaId: null, reparto: [{ cajaId: 'c1', monto: 30000 }, { cajaId: 'c2', monto: 70000 }], createdAt: 3,
+    };
+    const egreso = {
+      id: 'e1', tipo: 'egreso' as const, monto: 5000, fecha: 2, descripcion: 'Mercado',
+      cajaId: 'c1', reparto: [], createdAt: 2,
+    };
+    const items = [ingreso, egreso];
+
+    it('con tipo "ingreso" deja solo los ingresos', () => {
+      expect(filtrarHistorial(items, { tipo: 'ingreso' }).map((t) => t.id)).toEqual(['i1']);
+    });
+
+    it('con tipo "egreso" deja solo los egresos', () => {
+      expect(filtrarHistorial(items, { tipo: 'egreso' }).map((t) => t.id)).toEqual(['e1']);
+    });
+
+    it('con tipo null no descarta nada (equivale a "todos")', () => {
+      expect(filtrarHistorial(items, { tipo: null }).map((t) => t.id)).toEqual(['i1', 'e1']);
+    });
+
+    it('sin la clave tipo tampoco descarta nada', () => {
+      expect(filtrarHistorial(items, {}).map((t) => t.id)).toEqual(['i1', 'e1']);
+    });
+
+    it('combina tipo con caja: un egreso de otra caja queda fuera', () => {
+      const egresoOtraCaja = { ...egreso, id: 'e2', cajaId: 'c2' };
+      const resultado = filtrarHistorial([...items, egresoOtraCaja], { tipo: 'egreso', cajaId: 'c1' });
+      expect(resultado.map((t) => t.id)).toEqual(['e1']);
+    });
+
+    it('combina tipo con caja: el ingreso que tocó esa caja sobrevive al filtro de ingresos', () => {
+      const resultado = filtrarHistorial(items, { tipo: 'ingreso', cajaId: 'c1' });
+      expect(resultado.map((t) => t.id)).toEqual(['i1']);
+    });
+  });
 });
 
 describe('rangoFecha', () => {

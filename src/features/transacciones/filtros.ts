@@ -15,10 +15,12 @@ export interface FiltroHistorial {
   cajaId?: string | null;
   desde?: number | null;
   hasta?: number | null;
+  tipo?: 'ingreso' | 'egreso' | null;
 }
 
 export function filtrarHistorial(items: Transaccion[], filtro: FiltroHistorial): Transaccion[] {
   return items.filter((item) => {
+    if (filtro.tipo != null && item.tipo !== filtro.tipo) return false;
     if (filtro.cajaId != null) {
       const tocaLaCaja = item.cajaId === filtro.cajaId
         || item.reparto.some((r) => r.cajaId === filtro.cajaId);
