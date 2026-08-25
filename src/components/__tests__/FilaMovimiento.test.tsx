@@ -1,4 +1,4 @@
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { render, screen, userEvent, within } from '@testing-library/react-native';
 import { FilaMovimiento } from '../FilaMovimiento';
 import { formatearMoneda } from '../../utils/dinero';
 import { MovimientoVista } from '../../features/transacciones/vistaHistorial';
@@ -113,5 +113,27 @@ describe('FilaMovimiento', () => {
 
     await user.longPress(screen.getByText('Sueldo'));
     expect(props.onBorrar).toHaveBeenCalledWith('i1');
+  });
+
+  it('el chevron vive fuera del Pressable de la fila, no dentro', async () => {
+    // Aserción estructural a propósito: `user.press` despacha el evento sobre
+    // el propio nodo y nunca simula el burbujeo hacia un Pressable ancestro,
+    // así que un test de interacción pasaría igual con el chevron anidado.
+    // Si el chevron acabara dentro de la fila, expandir dispararía la edición.
+    await render(<FilaMovimiento {...props} vista={vistaCompleta} />);
+
+    const fila = screen.getByTestId('fila-pressable');
+
+    expect(within(fila).queryByLabelText('Ver reparto')).toBeNull();
+    expect(screen.getByLabelText('Ver reparto')).toBeTruthy();
+  });
+
+  it('con porcentaje nulo no renderiza "null%" ni "NaN%"', async () => {
+    const sinPorcentaje: MovimientoVista = { ...vistaParcial, porcentaje: null };
+
+    await render(<FilaMovimiento {...props} vista={sinPorcentaje} />);
+
+    expect(screen.getByText(`de ${formatearMoneda(100000)}`)).toBeTruthy();
+    expect(screen.queryByText(/null|NaN/)).toBeNull();
   });
 });

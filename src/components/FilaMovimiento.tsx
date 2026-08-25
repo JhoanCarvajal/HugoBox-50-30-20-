@@ -34,6 +34,7 @@ export function FilaMovimiento({ vista, expandido, onToggle, onEditar, onBorrar 
     <View style={styles.card}>
       <View style={styles.top}>
         <Pressable
+          testID="fila-pressable"
           style={styles.row}
           onPress={() => onEditar(tx.id)}
           onLongPress={() => onBorrar(tx.id)}
