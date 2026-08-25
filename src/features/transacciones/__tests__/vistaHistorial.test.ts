@@ -87,6 +87,19 @@ describe('proyectarHistorial · con filtro de caja (lente «impacto en caja»)',
     expect(vista.esParcial).toBe(true);
     expect(vista.porcentaje).toBe(0);
   });
+
+  it('un ingreso con reparto de varias cajas donde una recibió 0 no se marca como parcial', () => {
+    // repartirIngreso genera una entrada por caja activa, con monto 0 cuando el
+    // redondeo deja sin nada a la caja minoritaria. La caja que se llevó todo
+    // recibió el 100%, aunque el reparto tenga dos entradas.
+    const casiTodo = { ...ingreso, monto: 3, reparto: [{ cajaId: 'c1', monto: 0 }, { cajaId: 'c2', monto: 3 }] };
+
+    const [vista] = proyectarHistorial([casiTodo], { cajaId: 'c2' }, cajas);
+
+    expect(vista.montoEfectivo).toBe(3);
+    expect(vista.esParcial).toBe(false);
+    expect(vista.porcentaje).toBeNull();
+  });
 });
 
 describe('proyectarHistorial · sin filtro de caja (lente «movimiento»)', () => {
