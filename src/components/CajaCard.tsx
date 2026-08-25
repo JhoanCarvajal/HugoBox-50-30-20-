@@ -24,7 +24,12 @@ export function CajaCard({ caja, index = 0, onPress, style }: Props) {
   const Contenedor: any = onPress ? Pressable : View;
 
   return (
-    <Contenedor style={[styles.card, style]} onPress={onPress}>
+    <Contenedor
+      style={[styles.card, style]}
+      onPress={onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      accessibilityLabel={onPress ? `Ver historial de ${caja.nombre}` : undefined}
+    >
       <View style={styles.fila}>
         <Avatar
           label={inicial(caja.nombre)}

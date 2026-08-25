@@ -373,4 +373,68 @@ describe('Historial', () => {
     expect(screen.getByText('Mercado')).toBeTruthy();
     expect(setParams).not.toHaveBeenCalled();
   });
+  it('el parámetro cajaId llega del dashboard y deja el historial filtrado por esa caja', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ cajaId: 'c2' });
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+
+    await render(<Historial />);
+
+    // Ahorro (c2) solo recibió su porción del ingreso; el egreso es de Gastos.
+    expect(screen.getByText(`+${formatearMoneda(70000)}`)).toBeTruthy();
+    expect(screen.queryByText('Mercado')).toBeNull();
+  });
+  it('limpia el parámetro cajaId tras consumirlo', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ cajaId: 'c2' });
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+
+    await render(<Historial />);
+
+    expect(setParams).toHaveBeenCalledWith({ cajaId: undefined });
+  });
+
+  it('el parámetro cajaId resetea los filtros de tipo y fecha puestos a mano', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+    const user = userEvent.setup();
+
+    await render(<Historial />);
+
+    // El usuario acota a mano: solo egresos y un rango que deja fuera estas
+    // fechas de prueba (epoch 2 y 3 ms, es decir 1970).
+    await user.press(screen.getByText('Egresos'));
+    await user.press(screen.getByText('Este mes'));
+    expect(screen.queryByText('Sueldo')).toBeNull();
+
+    // Llega la navegación desde la tarjeta de Ahorro del dashboard.
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ cajaId: 'c2' });
+    await screen.rerender(<Historial />);
+
+    // El reset de tipo y fecha devuelve el ingreso a la lista, ya recortado a
+    // la porción que entró a Ahorro.
+    expect(screen.getByText(`+${formatearMoneda(70000)}`)).toBeTruthy();
+    expect(screen.queryByText('Mercado')).toBeNull();
+  });
+
+  it('ignora un cajaId vacío', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ cajaId: '' });
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+
+    await render(<Historial />);
+
+    expect(screen.getByText('Sueldo')).toBeTruthy();
+    expect(screen.getByText('Mercado')).toBeTruthy();
+    expect(setParams).not.toHaveBeenCalled();
+  });
 });

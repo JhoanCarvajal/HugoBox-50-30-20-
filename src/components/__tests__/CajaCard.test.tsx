@@ -1,4 +1,4 @@
-import { render } from '@testing-library/react-native';
+import { render, userEvent } from '@testing-library/react-native';
 import { CajaCard } from '../CajaCard';
 import { Caja } from '../../types/models';
 
@@ -43,5 +43,21 @@ describe('CajaCard', () => {
       return estilos.some((st) => st && st.color === '#d32f2f');
     });
     expect(saldoConEstiloRojo).toBe(true);
+  });
+
+  it('se anuncia como botón y dispara onPress al tocarla', async () => {
+    const user = userEvent.setup();
+    const onPress = jest.fn();
+    const { getByRole } = await render(<CajaCard caja={cajaBase} onPress={onPress} />);
+
+    await user.press(getByRole('button', { name: 'Ver historial de Gastos' }));
+
+    expect(onPress).toHaveBeenCalledTimes(1);
+  });
+
+  it('sin onPress no es interactiva: no expone rol de botón', async () => {
+    const { queryByRole } = await render(<CajaCard caja={cajaBase} />);
+
+    expect(queryByRole('button')).toBeNull();
   });
 });

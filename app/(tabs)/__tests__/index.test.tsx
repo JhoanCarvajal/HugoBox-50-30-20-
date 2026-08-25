@@ -98,4 +98,13 @@ describe('Dashboard (index)', () => {
 
     expect(push).toHaveBeenCalledWith({ pathname: '/historial', params: { tipo: 'egreso' } });
   });
+  it('tocar una caja navega al historial filtrado por esa caja', async () => {
+    (useCajas as jest.Mock).mockReturnValue({ cajas: cajasMock, cargando: false });
+    await render(<Cajas />);
+    const user = userEvent.setup();
+
+    await user.press(screen.getByLabelText('Ver historial de Gastos'));
+
+    expect(push).toHaveBeenCalledWith({ pathname: '/historial', params: { cajaId: 'c1' } });
+  });
 });

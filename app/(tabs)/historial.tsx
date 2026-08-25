@@ -41,20 +41,37 @@ export default function Historial() {
   // compararlos sin que abrir uno cierre el anterior.
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
 
-  // El dashboard navega aquí con `?tipo=ingreso|egreso` desde sus pills. Se
-  // resetean caja y fecha para que la lista coincida exactamente con la cifra
-  // que el usuario acaba de tocar, y se limpia el parámetro: si se dejara
-  // puesto, seguiría pegado a la ruta del tab y volvería a forzar el filtro
-  // cada vez que se regresara al historial desde otro tab.
-  const { tipo } = useLocalSearchParams<{ tipo?: string }>();
+  // El dashboard navega aquí con `?tipo=ingreso|egreso` desde sus pills y con
+  // `?cajaId=<id>` desde sus tarjetas de caja. En ambos casos se resetean los
+  // otros dos filtros para que la lista coincida exactamente con la cifra que
+  // el usuario acaba de tocar, y se limpia el parámetro: si se dejara puesto,
+  // seguiría pegado a la ruta del tab y volvería a forzar el filtro cada vez
+  // que se regresara al historial desde otro tab.
+  //
+  // Un solo efecto para los dos parámetros, no uno por cada uno: dos efectos
+  // encadenarían dos `router.setParams` en el mismo render y el segundo
+  // pisaría al primero.
+  const { tipo, cajaId } = useLocalSearchParams<{ tipo?: string; cajaId?: string }>();
 
   useEffect(() => {
-    if (tipo !== 'ingreso' && tipo !== 'egreso') return;
-    setFiltroTipo(tipo);
-    setFiltroCaja(null);
-    setFiltroFecha('todo');
-    router.setParams({ tipo: undefined });
-  }, [tipo]);
+    if (tipo === 'ingreso' || tipo === 'egreso') {
+      setFiltroTipo(tipo);
+      setFiltroCaja(null);
+      setFiltroFecha('todo');
+      router.setParams({ tipo: undefined });
+      return;
+    }
+
+    // No se valida contra `cajas`: esa lista llega asíncrona y en el primer
+    // render viene vacía, así que comprobar la pertenencia aquí descartaría
+    // un filtro válido. El id lo emite nuestro propio dashboard.
+    if (cajaId) {
+      setFiltroCaja(cajaId);
+      setFiltroTipo('todos');
+      setFiltroFecha('todo');
+      router.setParams({ cajaId: undefined });
+    }
+  }, [tipo, cajaId]);
 
   // Cambiar la caja filtrada puede vaciar el `desglose` de una fila que
   // seguía expandida (un ingreso repartido deja de tocar la caja recién

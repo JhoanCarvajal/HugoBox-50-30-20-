@@ -101,7 +101,14 @@ export default function Cajas() {
         ) : (
           <View style={styles.lista}>
             {cajas.map((caja, i) => (
-              <CajaCard key={caja.id} caja={caja} index={i} />
+              <CajaCard
+                key={caja.id}
+                caja={caja}
+                index={i}
+                onPress={() =>
+                  router.push({ pathname: '/historial', params: { cajaId: caja.id } })
+                }
+              />
             ))}
           </View>
         )}
