@@ -50,6 +50,15 @@ const itemsMock = [
   },
 ];
 
+/**
+ * El resumen del encabezado repite cifras que también salen en la lista (con
+ * una sola fila visible, ambas son el mismo número), así que los asserts de
+ * monto se acotan a las filas.
+ */
+function filaConMonto(texto: string) {
+  return screen.queryAllByTestId('fila-pressable').find((fila) => within(fila).queryByText(texto));
+}
+
 describe('Historial', () => {
   const push = jest.fn();
   const setParams = jest.fn();
@@ -198,9 +207,9 @@ describe('Historial', () => {
   it('muestra el control de tipo con las tres opciones', async () => {
     await render(<Historial />);
 
-    expect(screen.getByText('Todos')).toBeTruthy();
-    expect(screen.getByText('Ingresos')).toBeTruthy();
-    expect(screen.getByText('Egresos')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Todos' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Ingresos' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Egresos' })).toBeTruthy();
   });
 
   it('filtrar por Ingresos oculta los egresos', async () => {
@@ -212,7 +221,7 @@ describe('Historial', () => {
     const user = userEvent.setup();
 
     await render(<Historial />);
-    await user.press(screen.getByText('Ingresos'));
+    await user.press(screen.getByRole('button', { name: 'Ingresos' }));
 
     expect(screen.getByText('Sueldo')).toBeTruthy();
     expect(screen.queryByText('Mercado')).toBeNull();
@@ -227,7 +236,7 @@ describe('Historial', () => {
     const user = userEvent.setup();
 
     await render(<Historial />);
-    await user.press(screen.getByText('Egresos'));
+    await user.press(screen.getByRole('button', { name: 'Egresos' }));
 
     expect(screen.getByText('Mercado')).toBeTruthy();
     expect(screen.queryByText('Sueldo')).toBeNull();
@@ -243,13 +252,13 @@ describe('Historial', () => {
 
       await render(<Historial />);
       // Sin filtro: el movimiento vale su 100%.
-      expect(screen.getByText(`+${formatearMoneda(100000)}`)).toBeTruthy();
+      expect(filaConMonto(`+${formatearMoneda(100000)}`)).toBeTruthy();
 
       await user.press(screen.getByText('Gastos'));
 
       // Con filtro de caja: solo la porción del reparto (30%).
-      expect(screen.getByText(`+${formatearMoneda(30000)}`)).toBeTruthy();
-      expect(screen.queryByText(`+${formatearMoneda(100000)}`)).toBeNull();
+      expect(filaConMonto(`+${formatearMoneda(30000)}`)).toBeTruthy();
+      expect(filaConMonto(`+${formatearMoneda(100000)}`)).toBeUndefined();
       expect(screen.getByText(`de ${formatearMoneda(100000)} · 30%`)).toBeTruthy();
     },
   );
@@ -355,8 +364,8 @@ describe('Historial', () => {
     // El reset de fecha devuelve el ingreso a la lista, y el de caja hace que
     // se muestre por su monto total en vez de por la porción de Gastos.
     expect(screen.getByText('Sueldo')).toBeTruthy();
-    expect(screen.getByText(`+${formatearMoneda(100000)}`)).toBeTruthy();
-    expect(screen.queryByText(`+${formatearMoneda(30000)}`)).toBeNull();
+    expect(filaConMonto(`+${formatearMoneda(100000)}`)).toBeTruthy();
+    expect(filaConMonto(`+${formatearMoneda(30000)}`)).toBeUndefined();
   });
 
   it('ignora un valor de tipo que no sea ingreso ni egreso', async () => {
@@ -384,7 +393,7 @@ describe('Historial', () => {
     await render(<Historial />);
 
     // Ahorro (c2) solo recibió su porción del ingreso; el egreso es de Gastos.
-    expect(screen.getByText(`+${formatearMoneda(70000)}`)).toBeTruthy();
+    expect(filaConMonto(`+${formatearMoneda(70000)}`)).toBeTruthy();
     expect(screen.queryByText('Mercado')).toBeNull();
   });
   it('limpia el parámetro cajaId tras consumirlo', async () => {
@@ -409,7 +418,7 @@ describe('Historial', () => {
 
     // El usuario acota a mano: solo egresos y un rango que deja fuera estas
     // fechas de prueba (epoch 2 y 3 ms, es decir 1970).
-    await user.press(screen.getByText('Egresos'));
+    await user.press(screen.getByRole('button', { name: 'Egresos' }));
     await user.press(screen.getByText('Este mes'));
     expect(screen.queryByText('Sueldo')).toBeNull();
 
@@ -419,7 +428,7 @@ describe('Historial', () => {
 
     // El reset de tipo y fecha devuelve el ingreso a la lista, ya recortado a
     // la porción que entró a Ahorro.
-    expect(screen.getByText(`+${formatearMoneda(70000)}`)).toBeTruthy();
+    expect(filaConMonto(`+${formatearMoneda(70000)}`)).toBeTruthy();
     expect(screen.queryByText('Mercado')).toBeNull();
   });
 
@@ -436,5 +445,74 @@ describe('Historial', () => {
     expect(screen.getByText('Sueldo')).toBeTruthy();
     expect(screen.getByText('Mercado')).toBeTruthy();
     expect(setParams).not.toHaveBeenCalled();
+  });
+
+  describe('resumen del filtro', () => {
+    beforeEach(() => {
+      (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+      (useHistorial as jest.Mock).mockReturnValue({
+        items: [ingresoRepartido, itemsMock[0]],
+        cargando: false,
+      });
+    });
+
+    it('con el segmento en Todos muestra ingresos, egresos y el neto', async () => {
+      await render(<Historial />);
+
+      expect(screen.getByTestId('resumen-ingresos')).toHaveTextContent(`+${formatearMoneda(100000)}`);
+      expect(screen.getByTestId('resumen-egresos')).toHaveTextContent(`-${formatearMoneda(5000)}`);
+      expect(screen.getByTestId('resumen-neto')).toHaveTextContent(formatearMoneda(95000));
+    });
+
+    it('con el segmento en Egresos muestra una sola cifra', async () => {
+      const user = userEvent.setup();
+
+      await render(<Historial />);
+      await user.press(screen.getByRole('button', { name: 'Egresos' }));
+
+      expect(screen.getByTestId('resumen-unico')).toHaveTextContent(`-${formatearMoneda(5000)}`);
+      expect(screen.queryByTestId('resumen-neto')).toBeNull();
+    });
+
+    it('las etiquetas no repiten las palabras del segmento de tipo', async () => {
+      await render(<Historial />);
+
+      expect(screen.getByText('Entró')).toBeTruthy();
+      expect(screen.getByText('Salió')).toBeTruthy();
+      // 'Ingresos' y 'Egresos' se quedan para el segmento y nada más.
+      expect(screen.getAllByText('Ingresos')).toHaveLength(1);
+      expect(screen.getAllByText('Egresos')).toHaveLength(1);
+    });
+
+    it('con un tipo concreto la etiqueta tampoco repite el segmento', async () => {
+      const user = userEvent.setup();
+
+      await render(<Historial />);
+      await user.press(screen.getByRole('button', { name: 'Egresos' }));
+
+      expect(screen.getByText('Salió')).toBeTruthy();
+      expect(screen.getAllByText('Egresos')).toHaveLength(1);
+    });
+
+    it('sin movimientos muestra ceros sin signo', async () => {
+      (useHistorial as jest.Mock).mockReturnValue({ items: [], cargando: false });
+
+      await render(<Historial />);
+
+      expect(screen.getByTestId('resumen-ingresos')).toHaveTextContent(formatearMoneda(0));
+      expect(screen.getByTestId('resumen-egresos')).toHaveTextContent(formatearMoneda(0));
+    });
+
+    it('al filtrar por una caja suma la porción que entró a esa caja', async () => {
+      // De los $1.000,00 del sueldo solo $300,00 tocaron Gastos, de donde
+      // además salieron los $50,00 del mercado.
+      const user = userEvent.setup();
+
+      await render(<Historial />);
+      await user.press(screen.getByText('Gastos'));
+
+      expect(screen.getByTestId('resumen-ingresos')).toHaveTextContent(`+${formatearMoneda(30000)}`);
+      expect(screen.getByTestId('resumen-neto')).toHaveTextContent(formatearMoneda(25000));
+    });
   });
 });

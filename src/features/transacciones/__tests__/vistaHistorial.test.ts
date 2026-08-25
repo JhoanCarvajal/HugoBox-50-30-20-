@@ -1,4 +1,4 @@
-import { proyectarHistorial } from '../vistaHistorial';
+import { proyectarHistorial, resumirVistas } from '../vistaHistorial';
 
 const cajas = [
   { id: 'c1', nombre: 'Gastos', porcentaje: 30, saldo: 0, esPorDefecto: true, orden: 0, createdAt: 1 },
@@ -169,5 +169,34 @@ describe('proyectarHistorial · contrato general', () => {
     const vistas = proyectarHistorial([ingreso, egreso], {}, cajas);
 
     expect(vistas.map((v) => v.tx.id)).toEqual(['i1', 'e1']);
+  });
+});
+
+describe('resumirVistas', () => {
+  it('sin movimientos todo queda en cero', () => {
+    expect(resumirVistas([])).toEqual({ ingresos: 0, egresos: 0, neto: 0 });
+  });
+
+  it('separa ingresos de egresos y el neto los resta', () => {
+    const resumen = resumirVistas(proyectarHistorial([ingreso, egreso], {}, cajas));
+
+    expect(resumen).toEqual({ ingresos: 100000, egresos: 5000, neto: 95000 });
+  });
+
+  it('con caja filtrada suma la porción que entró a esa caja, no el monto total', () => {
+    // Del ingreso de $1.000,00 solo $300,00 tocaron Gastos; el egreso de
+    // $50,00 salió de esa misma caja.
+    const filtro = { cajaId: 'c1' };
+    const resumen = resumirVistas(proyectarHistorial([ingreso, egreso], filtro, cajas));
+
+    expect(resumen).toEqual({ ingresos: 30000, egresos: 5000, neto: 25000 });
+  });
+
+  it('el neto es negativo cuando se gastó más de lo que entró', () => {
+    const egresoGrande = { ...egreso, id: 'e2', monto: 200000 };
+
+    const { neto } = resumirVistas(proyectarHistorial([ingreso, egresoGrande], {}, cajas));
+
+    expect(neto).toBe(-100000);
   });
 });

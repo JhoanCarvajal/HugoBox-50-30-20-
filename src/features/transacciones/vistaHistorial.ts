@@ -104,3 +104,27 @@ function subtituloSinFiltro(
   if (cajasTocadas === 0) return '';
   return cajasTocadas === 1 ? '1 caja' : `${cajasTocadas} cajas`;
 }
+
+export interface ResumenHistorial {
+  ingresos: number;
+  egresos: number;
+  neto: number;
+}
+
+/**
+ * Suma lo que el usuario tiene delante. Opera sobre las vistas ya filtradas y
+ * proyectadas —no sobre las transacciones crudas— para que el resumen no pueda
+ * desviarse de las filas: con una caja filtrada suma la porción que tocó esa
+ * caja, no el monto total del movimiento repartido.
+ */
+export function resumirVistas(vistas: MovimientoVista[]): ResumenHistorial {
+  let ingresos = 0;
+  let egresos = 0;
+
+  for (const vista of vistas) {
+    if (vista.tx.tipo === 'ingreso') ingresos += vista.montoEfectivo;
+    else egresos += vista.montoEfectivo;
+  }
+
+  return { ingresos, egresos, neto: ingresos - egresos };
+}

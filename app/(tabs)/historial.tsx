@@ -7,11 +7,12 @@ import { useCajas } from '../../src/features/cajas/useCajas';
 import { useSessionStore } from '../../src/stores/sessionStore';
 import { borrarTransaccion } from '../../src/features/transacciones/transaccionesService';
 import { filtrarHistorial, rangoFecha, ClaveRangoFecha } from '../../src/features/transacciones/filtros';
-import { proyectarHistorial } from '../../src/features/transacciones/vistaHistorial';
+import { proyectarHistorial, resumirVistas } from '../../src/features/transacciones/vistaHistorial';
 import { Chip } from '../../src/components/ui/Chip';
 import { SegmentedControl } from '../../src/components/ui/SegmentedControl';
 import { FilaMovimiento } from '../../src/components/FilaMovimiento';
-import { colors, spacing, fontSize, fontWeight } from '../../src/theme';
+import { formatearMoneda } from '../../src/utils/dinero';
+import { colors, spacing, radius, fontSize, fontWeight } from '../../src/theme';
 
 const OPCIONES_FECHA: { clave: ClaveRangoFecha; etiqueta: string }[] = [
   { clave: 'todo', etiqueta: 'Todo' },
@@ -27,6 +28,11 @@ const OPCIONES_TIPO: { value: ClaveTipo; label: string }[] = [
   { value: 'ingreso', label: 'Ingresos' },
   { value: 'egreso', label: 'Egresos' },
 ];
+
+/** Un cero no es ni entrada ni salida: el signo solo estorba. */
+function conSigno(monto: number, signo: '+' | '-'): string {
+  return monto === 0 ? formatearMoneda(0) : `${signo}${formatearMoneda(monto)}`;
+}
 
 export default function Historial() {
   const router = useRouter();
@@ -96,6 +102,8 @@ export default function Historial() {
     return proyectarHistorial(filtrarHistorial(items, filtro), filtro, cajas);
   }, [items, filtroCaja, filtroTipo, filtroFecha, cajas]);
 
+  const resumen = useMemo(() => resumirVistas(vistas), [vistas]);
+
   const alternarExpandido = (id: string) => {
     setExpandidos((prev) => {
       const siguiente = new Set(prev);
@@ -147,6 +155,50 @@ export default function Historial() {
           <Chip key={o.clave} label={o.etiqueta} active={filtroFecha === o.clave} onPress={() => setFiltroFecha(o.clave)} />
         ))}
       </ScrollView>
+
+      {/* Cuánto suma lo que hay debajo. Las etiquetas no reusan «Ingresos» y
+          «Egresos» para no repetir al pie de la letra el segmento que va justo
+          encima. Con el segmento en un tipo concreto la otra columna siempre
+          sería cero, así que se colapsa a una sola cifra. */}
+      {filtroTipo === 'todos' ? (
+        <View style={styles.resumen}>
+          <View>
+            <Text style={styles.resumenEtiqueta}>Entró</Text>
+            <Text testID="resumen-ingresos" style={[styles.resumenMonto, styles.in]}>
+              {conSigno(resumen.ingresos, '+')}
+            </Text>
+          </View>
+          <View>
+            <Text style={styles.resumenEtiqueta}>Salió</Text>
+            <Text testID="resumen-egresos" style={[styles.resumenMonto, styles.out]}>
+              {conSigno(resumen.egresos, '-')}
+            </Text>
+          </View>
+          <View style={styles.resumenNeto}>
+            <Text style={styles.resumenEtiqueta}>Neto</Text>
+            <Text
+              testID="resumen-neto"
+              style={[styles.resumenMonto, resumen.neto < 0 ? styles.out : styles.in]}
+            >
+              {formatearMoneda(resumen.neto)}
+            </Text>
+          </View>
+        </View>
+      ) : (
+        <View style={[styles.resumen, styles.resumenUnaLinea]}>
+          <Text style={styles.resumenEtiqueta}>
+            {filtroTipo === 'ingreso' ? 'Entró' : 'Salió'}
+          </Text>
+          <Text
+            testID="resumen-unico"
+            style={[styles.resumenMonto, filtroTipo === 'ingreso' ? styles.in : styles.out]}
+          >
+            {filtroTipo === 'ingreso'
+              ? conSigno(resumen.ingresos, '+')
+              : conSigno(resumen.egresos, '-')}
+          </Text>
+        </View>
+      )}
     </View>
   );
 
@@ -187,6 +239,21 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   chips: { gap: spacing.sm, paddingRight: spacing.lg },
+  resumen: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    backgroundColor: colors.surface,
+    borderRadius: radius.md,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    marginTop: spacing.xs,
+  },
+  resumenUnaLinea: { alignItems: 'center' },
+  resumenNeto: { alignItems: 'flex-end' },
+  resumenEtiqueta: { fontSize: fontSize.xs, color: colors.text.tertiary },
+  resumenMonto: { fontSize: fontSize.md, fontWeight: fontWeight.bold, marginTop: 2 },
+  in: { color: colors.success },
+  out: { color: colors.error },
   vacio: {
     color: colors.text.tertiary,
     fontSize: fontSize.md,
