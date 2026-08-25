@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useHistorial } from '../../src/features/transacciones/useHistorial';
 import { useCajas } from '../../src/features/cajas/useCajas';
 import { useSessionStore } from '../../src/stores/sessionStore';
@@ -40,6 +40,21 @@ export default function Historial() {
   // Set y no un solo id: se pueden abrir varios repartos a la vez para
   // compararlos sin que abrir uno cierre el anterior.
   const [expandidos, setExpandidos] = useState<Set<string>>(new Set());
+
+  // El dashboard navega aquí con `?tipo=ingreso|egreso` desde sus pills. Se
+  // resetean caja y fecha para que la lista coincida exactamente con la cifra
+  // que el usuario acaba de tocar, y se limpia el parámetro: si se dejara
+  // puesto, seguiría pegado a la ruta del tab y volvería a forzar el filtro
+  // cada vez que se regresara al historial desde otro tab.
+  const { tipo } = useLocalSearchParams<{ tipo?: string }>();
+
+  useEffect(() => {
+    if (tipo !== 'ingreso' && tipo !== 'egreso') return;
+    setFiltroTipo(tipo);
+    setFiltroCaja(null);
+    setFiltroFecha('todo');
+    router.setParams({ tipo: undefined });
+  }, [tipo]);
 
   const vistas = useMemo(() => {
     const { desde, hasta } = rangoFecha(filtroFecha, Date.now());

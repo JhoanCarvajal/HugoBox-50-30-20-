@@ -1,6 +1,6 @@
 import { Alert } from 'react-native';
 import { render, screen, userEvent } from '@testing-library/react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import Historial from '../historial';
 import { useHistorial } from '../../../src/features/transacciones/useHistorial';
 import { useCajas } from '../../../src/features/cajas/useCajas';
@@ -13,6 +13,7 @@ import { formatearMoneda } from '../../../src/utils/dinero';
 // editar) sin depender de un Stack real montado en el test.
 jest.mock('expo-router', () => ({
   useRouter: jest.fn(),
+  useLocalSearchParams: jest.fn(() => ({})),
 }));
 
 // Se mockea `useHistorial` (capa de datos en tiempo real de Firestore) para no
@@ -51,10 +52,12 @@ const itemsMock = [
 
 describe('Historial', () => {
   const push = jest.fn();
+  const setParams = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    (useRouter as jest.Mock).mockReturnValue({ push });
+    (useRouter as jest.Mock).mockReturnValue({ push, setParams });
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
     (useHistorial as jest.Mock).mockReturnValue({ items: itemsMock, cargando: false });
     (useCajas as jest.Mock).mockReturnValue({ cajas: [] });
     useSessionStore.setState({
@@ -262,5 +265,45 @@ describe('Historial', () => {
     expect(screen.getByText(formatearMoneda(30000))).toBeTruthy();
     expect(screen.getByText(formatearMoneda(70000))).toBeTruthy();
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it('el parámetro tipo=ingreso deja el historial filtrado por ingresos', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ tipo: 'ingreso' });
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+
+    await render(<Historial />);
+
+    expect(screen.getByText('Sueldo')).toBeTruthy();
+    expect(screen.queryByText('Mercado')).toBeNull();
+  });
+
+  it('el parámetro se consume una sola vez para no pisar los filtros manuales', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ tipo: 'ingreso' });
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+
+    await render(<Historial />);
+
+    // Sin este limpiado, el parámetro queda pegado a la ruta del tab y vuelve
+    // a forzar el filtro cada vez que el usuario regrese desde otro tab.
+    expect(setParams).toHaveBeenCalledWith({ tipo: undefined });
+  });
+
+  it('sin parámetro no se toca el filtro ni se limpia la ruta', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+
+    await render(<Historial />);
+
+    expect(screen.getByText('Sueldo')).toBeTruthy();
+    expect(screen.getByText('Mercado')).toBeTruthy();
+    expect(setParams).not.toHaveBeenCalled();
   });
 });
