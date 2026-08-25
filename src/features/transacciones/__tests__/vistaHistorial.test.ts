@@ -146,6 +146,22 @@ describe('proyectarHistorial · sin filtro de caja (lente «movimiento»)', () =
 
     expect(vista.desglose[1]).toEqual({ cajaId: 'c2', nombre: 'Caja eliminada', monto: 70000 });
   });
+
+  it('con `cajas` aún vacío, un egreso no afirma "Caja eliminada"', () => {
+    // `cajas: []` es el estado real mientras `useCajas` no ha resuelto su
+    // primer snapshot (arranca en `[]`, igual que `useHistorial`, sin orden
+    // garantizado entre ambos). No se sabe todavía si la caja existe: no se
+    // debe afirmar que ya no existe.
+    const [vista] = proyectarHistorial([egreso], {}, []);
+
+    expect(vista.subtitulo).toBe('');
+  });
+
+  it('con `cajas` aún vacío, el desglose de un ingreso repartido no afirma "Caja eliminada" en ninguna entrada', () => {
+    const [vista] = proyectarHistorial([ingreso], {}, []);
+
+    expect(vista.desglose.map((d) => d.nombre)).toEqual(['', '']);
+  });
 });
 
 describe('proyectarHistorial · contrato general', () => {

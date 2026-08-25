@@ -1,5 +1,5 @@
 import { Alert } from 'react-native';
-import { render, screen, userEvent } from '@testing-library/react-native';
+import { render, screen, userEvent, within } from '@testing-library/react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import Historial from '../historial';
 import { useHistorial } from '../../../src/features/transacciones/useHistorial';
@@ -267,6 +267,30 @@ describe('Historial', () => {
     expect(push).not.toHaveBeenCalled();
   });
 
+  it('cambiar el filtro de caja no deja un desglose huérfano', async () => {
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({ items: [ingresoRepartido], cargando: false });
+    const user = userEvent.setup();
+
+    await render(<Historial />);
+    // Expandir el reparto sin filtro de caja.
+    await user.press(screen.getByLabelText('Ver reparto'));
+    expect(screen.getByTestId('desglose')).toBeTruthy();
+
+    // Filtrar por Gastos: el ingreso sigue mostrándose (esa caja sí la
+    // tocó), pero la fila pasa a la lente «impacto en caja» y `desglose`
+    // queda en `[]`. El desglose ya pinta 'Gastos' como texto suelto y el
+    // chip de filtro tiene el mismo texto: se acota con `within()` al
+    // contenedor de chips para no chocar con "found multiple elements".
+    const chipsCaja = screen.getByTestId('chips-caja');
+    await user.press(within(chipsCaja).getByText('Gastos'));
+
+    // Sin el reseteo del Set de expandidos al cambiar `filtroCaja`, el id
+    // seguiría marcado como expandido y quedaría el separador huérfano (sin
+    // chevron para cerrarlo, porque `desglose` ya está vacío).
+    expect(screen.queryByTestId('desglose')).toBeNull();
+  });
+
   it('el parámetro tipo=ingreso deja el historial filtrado por ingresos', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ tipo: 'ingreso' });
     (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
@@ -281,7 +305,7 @@ describe('Historial', () => {
     expect(screen.queryByText('Mercado')).toBeNull();
   });
 
-  it('el parámetro se consume una sola vez para no pisar los filtros manuales', async () => {
+  it('limpia el parámetro de la ruta tras consumirlo', async () => {
     (useLocalSearchParams as jest.Mock).mockReturnValue({ tipo: 'ingreso' });
     (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
 

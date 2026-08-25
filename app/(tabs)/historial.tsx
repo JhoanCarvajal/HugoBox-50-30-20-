@@ -56,6 +56,16 @@ export default function Historial() {
     router.setParams({ tipo: undefined });
   }, [tipo]);
 
+  // Cambiar la caja filtrada puede vaciar el `desglose` de una fila que
+  // seguía expandida (un ingreso repartido deja de tocar la caja recién
+  // filtrada): el chevron desaparece pero, sin este reseteo, el bloque
+  // desplegado queda huérfano y sin control para cerrarlo. De paso corta una
+  // fuga: el Set dejaba de vaciarse nunca y acumulaba ids de filas que ya ni
+  // se muestran.
+  useEffect(() => {
+    setExpandidos(new Set());
+  }, [filtroCaja]);
+
   const vistas = useMemo(() => {
     const { desde, hasta } = rangoFecha(filtroFecha, Date.now());
     // El SegmentedControl necesita un valor concreto para marcar el segmento
@@ -108,7 +118,7 @@ export default function Historial() {
         onChange={setFiltroTipo}
       />
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
+      <ScrollView testID="chips-caja" horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chips}>
         <Chip label="Todas" active={!filtroCaja} onPress={() => setFiltroCaja(null)} />
         {cajas.map((c) => (
           <Chip key={c.id} label={c.nombre} active={filtroCaja === c.id} onPress={() => setFiltroCaja(c.id)} />

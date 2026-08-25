@@ -128,6 +128,19 @@ describe('FilaMovimiento', () => {
     expect(screen.getByLabelText('Ver reparto')).toBeTruthy();
   });
 
+  it('con desglose vacío no renderiza el contenedor aunque expandido sea true', async () => {
+    // Puede pasar en la integración: se expande el reparto de un ingreso y
+    // luego se filtra por una caja que ese ingreso no tocó. `desglose` pasa a
+    // `[]` pero el id sigue en el Set de expandidos de la pantalla. Sin este
+    // guard queda un separador huérfano (la raya del borde y el aire debajo)
+    // que el usuario no puede cerrar porque el chevron ya no se muestra.
+    const sinDesglose: MovimientoVista = { ...vistaCompleta, desglose: [] };
+
+    await render(<FilaMovimiento {...props} vista={sinDesglose} expandido />);
+
+    expect(screen.queryByTestId('desglose')).toBeNull();
+  });
+
   it('con porcentaje nulo no renderiza "null%" ni "NaN%"', async () => {
     const sinPorcentaje: MovimientoVista = { ...vistaParcial, porcentaje: null };
 

@@ -42,7 +42,15 @@ export function proyectarHistorial(
   cajas: Caja[],
 ): MovimientoVista[] {
   const nombrePorId = new Map(cajas.map((c) => [c.id, c.nombre]));
-  const nombreDe = (id: string) => nombrePorId.get(id) ?? CAJA_ELIMINADA;
+  // `useCajas` y `useHistorial` son dos `onSnapshot` independientes sin orden
+  // garantizado: si el snapshot de transacciones llega primero, `cajas` está
+  // vacío y un id ausente del Map no significa "caja eliminada", significa
+  // "todavía no sé". Solo con una lista ya cargada un id ausente es de verdad
+  // una caja que ya no existe.
+  const nombreDe = (id: string) => {
+    if (cajas.length === 0) return '';
+    return nombrePorId.get(id) ?? CAJA_ELIMINADA;
+  };
   const cajaFiltrada = filtro.cajaId ?? null;
 
   return items.map((tx) => {

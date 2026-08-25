@@ -69,8 +69,8 @@ export function FilaMovimiento({ vista, expandido, onToggle, onEditar, onBorrar 
         )}
       </View>
 
-      {expandido && (
-        <View style={styles.desglose}>
+      {puedeExpandir && expandido && (
+        <View testID="desglose" style={styles.desglose}>
           {desglose.map((d) => (
             <View key={d.cajaId} style={styles.desgloseFila}>
               <Text style={styles.desgloseNombre} numberOfLines={1}>{d.nombre}</Text>
