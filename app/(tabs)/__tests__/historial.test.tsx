@@ -306,4 +306,47 @@ describe('Historial', () => {
     expect(screen.getByText('Mercado')).toBeTruthy();
     expect(setParams).not.toHaveBeenCalled();
   });
+
+  it('el parámetro resetea los filtros de caja y fecha puestos a mano', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({});
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+    const user = userEvent.setup();
+
+    await render(<Historial />);
+
+    // El usuario acota a mano: por caja y por un rango que deja fuera estas
+    // fechas de prueba (epoch 2 y 3 ms, es decir 1970).
+    await user.press(screen.getByText('Gastos'));
+    await user.press(screen.getByText('Este mes'));
+    expect(screen.queryByText('Sueldo')).toBeNull();
+
+    // Llega la navegación desde el pill de Ingresos del dashboard.
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ tipo: 'ingreso' });
+    await screen.rerender(<Historial />);
+
+    // El reset de fecha devuelve el ingreso a la lista, y el de caja hace que
+    // se muestre por su monto total en vez de por la porción de Gastos.
+    expect(screen.getByText('Sueldo')).toBeTruthy();
+    expect(screen.getByText(`+${formatearMoneda(100000)}`)).toBeTruthy();
+    expect(screen.queryByText(`+${formatearMoneda(30000)}`)).toBeNull();
+  });
+
+  it('ignora un valor de tipo que no sea ingreso ni egreso', async () => {
+    (useLocalSearchParams as jest.Mock).mockReturnValue({ tipo: 'INGRESO' });
+    (useCajas as jest.Mock).mockReturnValue({ cajas: [cajaA, cajaB] });
+    (useHistorial as jest.Mock).mockReturnValue({
+      items: [ingresoRepartido, itemsMock[0]],
+      cargando: false,
+    });
+
+    await render(<Historial />);
+
+    expect(screen.getByText('Sueldo')).toBeTruthy();
+    expect(screen.getByText('Mercado')).toBeTruthy();
+    expect(setParams).not.toHaveBeenCalled();
+  });
 });
